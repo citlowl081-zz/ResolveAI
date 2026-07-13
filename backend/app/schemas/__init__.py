@@ -1,4 +1,5 @@
 """Pydantic schemas."""
 
-__all__ = ["APIResponse", "Pagination", "PaginatedResponse"]
+from app.schemas.common import APIResponse, PaginatedResponse, Pagination
 
+__all__ = ["APIResponse", "Pagination", "PaginatedResponse"]

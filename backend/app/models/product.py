@@ -2,6 +2,7 @@
 
 import uuid
 from datetime import datetime
+from decimal import Decimal
 
 from sqlalchemy import Boolean, DateTime, Integer, Numeric, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
@@ -19,7 +20,7 @@ class Product(Base):
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     category: Mapped[str] = mapped_column(String(50), nullable=False)
-    price: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
+    price: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     stock: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
     image_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     is_returnable: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=func.true())

@@ -2,6 +2,7 @@
 
 import uuid
 from datetime import datetime
+from decimal import Decimal
 
 from sqlalchemy import DateTime, Integer, Numeric, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
@@ -21,11 +22,11 @@ class Order(Base):
     )
     order_number: Mapped[str] = mapped_column(String(30), unique=True, nullable=False, index=True)
     status: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
-    total_amount: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
-    discount_amount: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False, server_default="0")
-    paid_amount: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False, server_default="0")
+    total_amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    discount_amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, server_default="0")
+    paid_amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, server_default="0")
     shipping_address: Mapped[str] = mapped_column(Text, nullable=False)
-    shipping_fee: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False, server_default="0")
+    shipping_fee: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, server_default="0")
     coupon_code: Mapped[str | None] = mapped_column(String(50), nullable=True)
     paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     shipped_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

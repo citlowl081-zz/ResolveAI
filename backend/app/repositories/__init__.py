@@ -1,1 +1,1 @@
-# Repository layer
+"""Repository layer."""

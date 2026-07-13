@@ -1,1 +1,1 @@
-# Business rules engine
+"""Business rules engine."""

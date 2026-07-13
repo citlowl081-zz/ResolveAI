@@ -2,6 +2,7 @@
 
 import uuid
 from datetime import datetime
+from decimal import Decimal
 
 from sqlalchemy import DateTime, Integer, Numeric, String, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID
@@ -22,9 +23,9 @@ class OrderItem(Base):
     )
     product_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     product_name: Mapped[str] = mapped_column(String(200), nullable=False)
-    unit_price: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
+    unit_price: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     quantity: Mapped[int] = mapped_column(Integer, nullable=False)
-    subtotal: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
+    subtotal: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )

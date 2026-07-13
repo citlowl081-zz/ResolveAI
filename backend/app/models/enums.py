@@ -3,19 +3,19 @@
 import enum
 
 
-class UserRole(str, enum.Enum):
+class UserRole(enum.StrEnum):
     CUSTOMER = "CUSTOMER"
     OPERATOR = "OPERATOR"
     ADMIN = "ADMIN"
 
 
-class RiskLevel(str, enum.Enum):
+class RiskLevel(enum.StrEnum):
     LOW = "LOW"
     MEDIUM = "MEDIUM"
     HIGH = "HIGH"
 
 
-class ProductCategory(str, enum.Enum):
+class ProductCategory(enum.StrEnum):
     ELECTRONICS = "ELECTRONICS"
     CLOTHING = "CLOTHING"
     FOOD = "FOOD"
@@ -24,7 +24,7 @@ class ProductCategory(str, enum.Enum):
     OTHER = "OTHER"
 
 
-class OrderStatus(str, enum.Enum):
+class OrderStatus(enum.StrEnum):
     PENDING_PAYMENT = "PENDING_PAYMENT"
     PAID = "PAID"
     SHIPPED = "SHIPPED"
@@ -32,7 +32,7 @@ class OrderStatus(str, enum.Enum):
     CANCELLED = "CANCELLED"
 
 
-class LogisticsStatus(str, enum.Enum):
+class LogisticsStatus(enum.StrEnum):
     PENDING = "PENDING"
     PICKED_UP = "PICKED_UP"
     IN_TRANSIT = "IN_TRANSIT"
