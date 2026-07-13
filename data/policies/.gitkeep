@@ -1,0 +1,14 @@
+# Policy documents will be placed here in Phase 04.
+# Format: Markdown files with YAML frontmatter for metadata.
+
+# Example structure:
+# ---
+# policy_id: POL-REF-001
+# title: 未发货退款规则
+# category: REFUND
+# issue_type: PRE_SHIP_REFUND
+# effective_date: 2024-01-01
+# version: 1
+# ---
+# # 未发货退款规则
+# ...
