@@ -27,7 +27,7 @@
 - **Backend:** Python 3.12, FastAPI, SQLAlchemy 2, Pydantic 2, LangGraph, PostgreSQL + pgvector.
 - **Frontend:** Next.js 14, TypeScript, Tailwind CSS, shadcn/ui.
 - **Deployment:** Docker, Docker Compose.
-- **No microservices, no Kafka, no Redis (Phase 00–06).**
+- **No microservices, no Kafka, no Redis (Phases 00–06).**
 - Follow the layered architecture: API → Service → Repository → Database.
 - Agent tools must call Service layer — never modify DB directly.
 

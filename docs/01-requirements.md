@@ -27,6 +27,7 @@
 ### FR-05: AI After-Sales Agent
 - FR-05.1: Users can initiate after-sales conversations via WebSocket or HTTP.
 - FR-05.2: Agent classifies intent into: LOGISTICS_INQUIRY, PRE_SHIP_REFUND, QUALITY_REFUND, EXCHANGE, MISSING_PARTS, ESCALATE_TO_HUMAN.
+  - **Note:** There are 5 core business scenarios (物流查询, 未发货退款, 已收货质量问题退款或换货, 缺件补发, 转人工) that map to 6 intent types — QUALITY_REFUND and EXCHANGE are separate intents within one business scenario (已收货质量问题退款或换货).
 - FR-05.3: Agent identifies the user and resolves which order they're referring to.
 - FR-05.4: Agent retrieves applicable after-sales policies via RAG.
 - FR-05.5: Agent checks eligibility using deterministic rules.

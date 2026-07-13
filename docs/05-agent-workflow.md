@@ -2,7 +2,7 @@
 
 ## State Machine Overview
 
-The ResolveAI agent uses a LangGraph state machine with 16 explicit nodes. Each node has a clear responsibility and deterministic routing logic.
+The ResolveAI agent uses a LangGraph state machine with 18 explicit nodes (13 active processing nodes + 5 terminal nodes). Each node has a clear responsibility and deterministic routing logic.
 
 ```
                           ┌─────────────┐
@@ -235,10 +235,11 @@ The ResolveAI agent uses a LangGraph state machine with 16 explicit nodes. Each 
 | **Output** | `confirmation: bool`, `user_feedback: Optional[str]` |
 | **LLM Call** | No — waits for structured user response |
 | **Max Retries** | 0 |
-| **Routes To** | RISK_CHECK (confirmed), COMPLETED (rejected) |
+| **Routes To** | RISK_CHECK (confirmed), COMPLETED (rejected — user declines), ORDER_RESOLUTION (rejected — user says wrong order/product) |
 | **Error Route** | N/A |
 | **Interruptible** | **YES** — this is a natural pause point |
 | **Resumable** | **YES** — resume with user's confirmation response |
+| **"Wrong Order" Path** | If user rejects and provides feedback indicating a different order (e.g., "不是这个订单"), agent re-enters ORDER_RESOLUTION with the feedback as disambiguation context. Candidate orders from the previous resolution are preserved in short-term memory. |
 
 ### 9. RISK_CHECK
 
@@ -314,13 +315,13 @@ The ResolveAI agent uses a LangGraph state machine with 16 explicit nodes. Each 
 
 **COMPLETED** — Successful completion. Returns final response to user.
 
-**NEED_MORE_INFORMATION** — Agent asks user a clarifying question. Resumable.
+**NEED_MORE_INFORMATION** — Agent asks user a clarifying question (e.g., "Which order did you mean?"). The current state (including `candidate_orders` and `conversation_history`) is checkpointed. The user's follow-up message re-enters the graph at INTENT_CLASSIFICATION with the previous `conversation_history` and `candidate_orders` preserved in short-term memory, allowing ORDER_RESOLUTION to disambiguate. Resumable.
 
-**RETRY** — Retries preceding node. Tracks retry count; exceeds max → FAILED.
+**RETRY** — Retries the preceding node in full. The node is idempotent-aware: tools that already completed (tracked via idempotency keys) are skipped on retry. Tracks retry count; exceeds max → FAILED.
 
-**ESCALATED** — Transferred to human operator. Creates escalation ticket.
+**ESCALATED** — Transferred to human operator. Before routing here, the calling node creates an escalation ticket via `escalate_to_human` tool and saves the ticket reference. The agent session ends; a human operator picks up the ticket from the admin queue.
 
-**FAILED** — Terminal failure. Logs error, notifies user with safe fallback message.
+**FAILED** — Terminal failure. Logs error with full context, notifies user with safe fallback message, and saves all available state for debugging. No sensitive operations are attempted after reaching FAILED.
 
 ## Graph State Schema
 
@@ -397,6 +398,14 @@ def route_after_eligibility(state: AgentState) -> str:
 def route_after_confirmation(state: AgentState) -> str:
     if state["user_confirmed"]:
         return "RISK_CHECK"
+    # User rejected — check if they indicated wrong order
+    if state.get("user_feedback") and any(
+        kw in state["user_feedback"].lower()
+        for kw in ["不是这个", "搞错了", "另一个", "其他订单", "不对"]
+    ):
+        # Re-enter ORDER_RESOLUTION with feedback as disambiguation
+        state["retry_count"] = 0  # reset for new resolution attempt
+        return "ORDER_RESOLUTION"
     return "COMPLETED"
 
 def route_after_risk(state: AgentState) -> str:

@@ -20,6 +20,7 @@ users ──┬── orders ──┬── order_items ─── products
 
 policy_documents (standalone, RAG)
 system_configs (standalone)
+evaluation_runs / evaluation_results (Phase 08 — not yet implemented, schema TBD)
 ```
 
 ## Tables
@@ -119,7 +120,7 @@ system_configs (standalone)
 | ticket_number | VARCHAR(30) | UNIQUE, NOT NULL | Human-readable ticket # |
 | user_id | UUID | FK → users.id, NOT NULL | |
 | order_id | UUID | FK → orders.id, NOT NULL | |
-| intent | intent_type ENUM | NOT NULL | LOGISTICS_INQUIRY, PRE_SHIP_REFUND, QUALITY_REFUND, EXCHANGE, MISSING_PARTS, OTHER |
+| intent | intent_type ENUM | NOT NULL | LOGISTICS_INQUIRY, PRE_SHIP_REFUND, QUALITY_REFUND, EXCHANGE, MISSING_PARTS, ESCALATE_TO_HUMAN, OTHER |
 | status | ticket_status ENUM | NOT NULL | OPEN, PROCESSING, PENDING_CONFIRMATION, PENDING_APPROVAL, APPROVED, REJECTED, COMPLETED, CANCELLED |
 | resolution_type | resolution_type ENUM | | REFUND, EXCHANGE, RESHIPMENT, INFO_ONLY, ESCALATED |
 | customer_request | TEXT | | Original customer message |
@@ -328,7 +329,7 @@ CREATE TYPE risk_level AS ENUM ('LOW', 'MEDIUM', 'HIGH');
 CREATE TYPE product_category AS ENUM ('ELECTRONICS', 'CLOTHING', 'FOOD', 'HOME', 'SPORTS', 'OTHER');
 CREATE TYPE order_status AS ENUM ('PENDING_PAYMENT', 'PAID', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'REFUNDED', 'PARTIALLY_REFUNDED');
 CREATE TYPE logistics_status AS ENUM ('PENDING', 'PICKED_UP', 'IN_TRANSIT', 'OUT_FOR_DELIVERY', 'DELIVERED', 'RETURNED');
-CREATE TYPE intent_type AS ENUM ('LOGISTICS_INQUIRY', 'PRE_SHIP_REFUND', 'QUALITY_REFUND', 'EXCHANGE', 'MISSING_PARTS', 'OTHER');
+CREATE TYPE intent_type AS ENUM ('LOGISTICS_INQUIRY', 'PRE_SHIP_REFUND', 'QUALITY_REFUND', 'EXCHANGE', 'MISSING_PARTS', 'ESCALATE_TO_HUMAN', 'OTHER');
 CREATE TYPE ticket_status AS ENUM ('OPEN', 'PROCESSING', 'PENDING_CONFIRMATION', 'PENDING_APPROVAL', 'APPROVED', 'REJECTED', 'COMPLETED', 'CANCELLED');
 CREATE TYPE resolution_type AS ENUM ('REFUND', 'EXCHANGE', 'RESHIPMENT', 'INFO_ONLY', 'ESCALATED');
 CREATE TYPE refund_type AS ENUM ('FULL', 'PARTIAL', 'SHIPPING_FEE');

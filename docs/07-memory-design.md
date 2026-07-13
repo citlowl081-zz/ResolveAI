@@ -84,15 +84,22 @@ class ShortTermMemory:
 ```
 
 ### Storage
-- Primary: LangGraph agent state (in-memory during session).
-- Persisted: Serialized to `agent_sessions.graph_state` on each checkpoint.
-- TTL: Configurable, default 60 minutes. Expired sessions are cleaned up.
+
+Short-term memory exists in two synchronized layers:
+
+1. **LangGraph agent state** (in-memory during session) — the authoritative copy during active conversation. Updated after every node execution.
+
+2. **`agent_sessions.graph_state`** (JSONB, persisted at each checkpoint) — the durable copy. LangGraph's built-in checkpointing serializes the full agent state (including all short-term memory fields) to this column after every node transition.
+
+3. **`customer_memories` table** (SHORT_TERM rows, optional) — a lightweight cross-session cache. On session end or checkpoint, key short-term fields (current intent, confirmed order, pending confirmations) are also upserted to `customer_memories` with `memory_type = 'SHORT_TERM'`. This enables a new session (within TTL) to pick up context even if the original `agent_sessions` row has expired. The LangGraph checkpoint in `agent_sessions.graph_state` remains the authoritative source for full session restore.
+
+- **TTL:** Configurable, default 60 minutes. Expired sessions and their SHORT_TERM memory rows are cleaned up.
 
 ### Behavior
 - Created when user starts a new conversation.
 - Updated after every node execution.
 - Cleared when session completes or expires.
-- On resume: restored from `agent_sessions` table.
+- On resume: restored from `agent_sessions.graph_state` (primary) or reconstructed from `customer_memories` SHORT_TERM rows (fallback).
 
 ## 2. Long-Term Memory (User)
 

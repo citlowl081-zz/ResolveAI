@@ -131,6 +131,32 @@ Return top 5 policies with:
 - `similarity_score`
 - `source_snippet` (the most relevant passage)
 
+## Policy Metadata for Deterministic Rules
+
+The eligibility rule engine (`check_after_sales_eligibility`) is deterministic code — it does NOT parse unstructured policy text. For the rule engine to function, each policy MUST include structured eligibility conditions in its `metadata_filter` JSONB field.
+
+### Required Metadata Fields
+
+```json
+{
+  "max_days_from_delivery": 7,
+  "max_days_from_payment": null,
+  "applicable_categories": ["ELECTRONICS"],
+  "excluded_categories": ["FOOD"],
+  "requires_inspection": true,
+  "requires_return_shipping": true,
+  "requires_original_packaging": false,
+  "max_refund_amount": null,
+  "allowed_order_statuses": ["DELIVERED"],
+  "allowed_refund_types": ["FULL", "PARTIAL"],
+  "is_high_risk": false,
+  "requires_human_approval": false,
+  "conflicts_with_policies": []
+}
+```
+
+The rule engine reads these structured fields — not the policy `content` text — to make deterministic eligibility decisions. The `content` field is used by the LLM for explanation and by RAG for vector search.
+
 ## Ingestion Pipeline
 
 ### Offline Ingestion

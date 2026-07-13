@@ -2,7 +2,7 @@
 
 ## Phase Goals
 
-Implement the 13+ agent tools with unified return format, logging, retry logic, and Pydantic schemas. Build the LangGraph state machine with all 16 nodes and routing logic. Integrate the LLM client for NLU tasks.
+Implement the 13+ agent tools with unified return format, logging, retry logic, and Pydantic schemas. Build the LangGraph state machine with all 18 nodes (13 active + 5 terminal) and routing logic. Integrate the LLM client for NLU tasks.
 
 ## Preconditions
 

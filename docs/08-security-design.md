@@ -57,6 +57,10 @@ async def get_order_detail(order_id: UUID, user: User) -> Order:
 ```
 
 3. **Agent Tool Level:** Tools validate that the calling agent has permission for the operation.
+   - Every sensitive tool receives `user_id` from the LangGraph state (set during CUSTOMER_IDENTIFICATION from the verified JWT).
+   - Tools call Service layer methods, which re-verify ownership (e.g., `user_id` matches `order.user_id`).
+   - The agent cannot impersonate users — `user_id` is set once at session start and never modified by LLM nodes.
+   - Tool-level permission errors are treated as potential security violations and logged at WARN level.
 
 ## Input Validation
 
@@ -115,13 +119,18 @@ Operations that modify business state must include ALL of:
 
 ### Idempotency
 
-Idempotency keys are generated from `(operation_type, resource_id, timestamp_bucket)`:
+Idempotency keys are generated from `(operation_type, resource_id, item_ids, date)`:
 
 ```python
-def generate_idempotency_key(operation: str, order_id: UUID) -> str:
+def generate_idempotency_key(operation: str, order_id: UUID, item_ids: list[UUID] | None = None) -> str:
     today = datetime.utcnow().strftime("%Y%m%d")
+    item_part = "_".join(sorted(str(i) for i in (item_ids or [])))
+    if item_part:
+        return f"{operation}_{order_id}_{item_part}_{today}"
     return f"{operation}_{order_id}_{today}"
 ```
+
+This allows per-item idempotency — a refund for item A and a refund for item B on the same order on the same day have different keys and don't block each other.
 
 Before executing:
 ```python
