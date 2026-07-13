@@ -1,28 +1,21 @@
 # Active Phase
 
-**Current Phase:** Phase 01 — Project Foundation
+**Current Phase:** Phase 02 — Business Backend
 
-**Started:** 2026-07-13  
-**Target Completion:** 2026-07-13  
-**Status:** In Progress
+**Started:** TBD  
+**Target Completion:** TBD  
+**Status:** Pending
 
-## What This Phase Covers
+## What Phase 02 Covers
 
-- FastAPI app factory with configuration, health check, and database infrastructure.
-- PostgreSQL 16 + pgvector via Docker Compose.
-- Alembic initialization with pgvector extension (no business tables yet).
-- Two Next.js frontend scaffolds (customer-web, admin-web).
-- Testing infrastructure (pytest, Ruff, mypy).
-- CI pipeline (GitHub Actions).
-- Makefile with portable Python venv commands.
+- All 17 SQLAlchemy business models and 18 PostgreSQL enums.
+- Business Alembic migration (002_create_business_tables).
+- JWT authentication, password hashing, role-based access control.
+- Product listing and detail API.
+- Order creation, listing, and detail API.
+- Business Service and Repository layers.
+- Seed data (3 users, 10 products, 3 orders).
 
-## What This Phase Does NOT Cover
+## Previous Phase
 
-- No business models, enums, JWT auth, product API, order API (→ Phase 02).
-- No Service/Repository layers (→ Phase 02).
-- No seed data (→ Phase 02).
-- No Agent, RAG, Memory, Human Approval (→ Phases 03–06).
-
-## Next Phase
-
-Phase 02 — Business Backend: SQLAlchemy models, repositories, services, JWT auth, product/order API, seed data.
+Phase 01 completed on 2026-07-13. See `reports/progress/phase-01-foundation-report.md`.
