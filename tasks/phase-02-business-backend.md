@@ -2,14 +2,54 @@
 
 ## Phase Goals
 
-Implement the complete business logic layer: repositories, services, and API endpoints for all business entities. This phase establishes the REST API that both the frontend and the agent tools will use.
+Implement the complete business logic layer: SQLAlchemy models, Alembic migration, repositories, services, API endpoints, auth, and seed data. This phase establishes the REST API that both the frontend and the agent tools will use.
+
+## Revision History
+
+- **2026-07-13 (original):** Plan from Phase 00.
+- **2026-07-13 (revision):** Added model creation, enum creation, auth, product API, seed data, and business migration tasks moved from Phase 01.
 
 ## Preconditions
 
-- Phase 01 completed (database models, migrations, auth working).
-- Test database available.
+- Phase 01 completed (FastAPI app, DB infrastructure, health check, Alembic with pgvector, frontend scaffolds).
+- Test database available (PostgreSQL + pgvector).
 
 ## Task Checklist
+
+### 2.0 SQLAlchemy Models & Enums (Moved from Phase 01)
+- [ ] Define all 18 PostgreSQL enums (user_role, risk_level, product_category, order_status, logistics_status, intent_type, ticket_status, resolution_type, refund_type, refund_status, reshipment_status, approval_type, approval_status, session_status, message_role, memory_type, policy_category, policy_status).
+- [ ] `User` model with role enum.
+- [ ] `Product` model with category enum.
+- [ ] `Order` model with status enum, version for optimistic locking.
+- [ ] `OrderItem` model.
+- [ ] `LogisticsRecord` model with JSONB events.
+- [ ] `AfterSalesTicket` model with idempotency_key, version.
+- [ ] `RefundRecord` model with idempotency_key, version.
+- [ ] `ReshipmentOrder` model with idempotency_key, version.
+- [ ] `ApprovalTask` model.
+- [ ] `AgentSession` model with JSONB graph_state.
+- [ ] `AgentMessage` model.
+- [ ] `AgentToolLog` model.
+- [ ] `AgentTrace` model.
+- [ ] `CustomerMemory` model.
+- [ ] `PolicyDocument` model with pgvector embedding column.
+- [ ] `AuditLog` model.
+- [ ] `SystemConfig` model.
+
+### 2.0b Business Migration & Seed Data (Moved from Phase 01)
+- [ ] Generate Alembic migration `002_create_business_tables.py` for all 17 tables + 18 enums.
+- [ ] Test: `alembic upgrade head` + `alembic downgrade -1`.
+- [ ] Implement `app/database/seed.py` — seed script.
+- [ ] Create 3 test users (customer, operator, admin).
+- [ ] Create 10 sample products across categories.
+- [ ] Create 3 sample orders with various statuses.
+- [ ] Seed data runs on first startup (idempotent).
+
+### 2.0c Security Foundation (Moved from Phase 01)
+- [ ] Implement `app/security/jwt.py` — JWT token generation and validation.
+- [ ] Implement `app/security/password.py` — password hashing with bcrypt.
+- [ ] Implement `app/security/dependencies.py` — role-based dependency injection.
+- [ ] Implement `app/security/pii.py` — complete PII masking utilities.
 
 ### 2.1 Repository Layer
 - [ ] `UserRepository` — CRUD, get by email, update risk level.
