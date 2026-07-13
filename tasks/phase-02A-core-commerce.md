@@ -70,7 +70,7 @@ Build a working e-commerce backend that runs independently without LLM or Agent.
 ### 2A.7 Rules Engine
 - [ ] `app/rules/state_transitions.py` — allowed_transitions dict, validate_transition().
 
-### 2A.8 API Endpoints (17 endpoints)
+### 2A.8 API Endpoints (18 endpoints: Auth 4 + Products 4 + Orders 7 + Logistics 2 + Admin 1)
 
 #### Auth (4)
 - [ ] `POST /api/v1/auth/register` — public.

@@ -16,7 +16,7 @@ Implement the complete business logic layer. The original Phase 02 plan has been
 | Phase | Name | Status | Tables | Enums | Document |
 |-------|------|--------|--------|-------|----------|
 | 02A | Core Commerce Backend | ⬜ Pending | 8 | 5 | [phase-02A-core-commerce.md](phase-02A-core-commerce.md) |
-| 02B | After-sales Business Backend | ⬜ Pending | 3 (+2 ALTER) | 13 (+1 ALTER) | [phase-02B-after-sales.md](phase-02B-after-sales.md) |
+| 02B | After-sales Business Backend | ⬜ Pending | 3 (+2 ALTER) | 6 (+1 ALTER) | [phase-02B-after-sales.md](phase-02B-after-sales.md) |
 
 ## Split Rationale
 

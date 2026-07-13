@@ -41,7 +41,12 @@ Implement after-sales business entities: tickets, refunds, reshipments. Add refu
   ALTER TYPE order_status_old RENAME TO order_status;
   ```
 - [ ] ALTER TABLE order_items ADD COLUMN is_refunded BOOLEAN DEFAULT FALSE.
-- [ ] CREATE TYPE × 13 (intent_type, ticket_status, resolution_type, refund_type, refund_status, reshipment_status, approval_type, approval_status, session_status, message_role, memory_type, policy_category, policy_status).
+- [ ] CREATE TYPE × 6 (intent_type, ticket_status, resolution_type, refund_type, refund_status, reshipment_status).
+  - **Deferred enums (not created in Phase 02B):**
+    - `approval_type`, `approval_status` → Phase 06 (Human Approval)
+    - `session_status`, `message_role` → Phase 03 (Agent Sessions/Messages)
+    - `memory_type` → Phase 05 (Customer Memories)
+    - `policy_category`, `policy_status` → Phase 04 (Policy Documents)
 - [ ] CREATE TABLE × 3 (after_sales_tickets, refund_records, reshipment_orders).
 - [ ] Idempotency keys on tickets, refunds, reshipments.
 
