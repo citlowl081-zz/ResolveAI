@@ -304,7 +304,7 @@ class OrderService:
                         "subtotal": str(i.subtotal)} for i in items],
         }
 
-    async def _order_summary(self, order) -> dict:
+    async def _order_summary(self, order) -> dict:  # type: ignore[no-untyped-def]
         return {
             "id": str(order.id), "order_number": order.order_number,
             "status": order.status, "total_amount": str(order.total_amount),

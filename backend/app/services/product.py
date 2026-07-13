@@ -64,7 +64,7 @@ class ProductService:
         return await self.get_product(p.id)
 
     async def update_product(
-        self, product_id: uuid.UUID, expected_version: int, **fields,
+        self, product_id: uuid.UUID, expected_version: int, **fields: object,
     ) -> dict:
         existing = await self.product_repo.get_by_id(product_id)
         if existing is None or not existing.is_active:

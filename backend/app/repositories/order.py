@@ -30,7 +30,7 @@ class OrderRepository(BaseRepository):
         return list(result.scalars().all()), total
 
     async def update_with_version(
-        self, order_id: uuid.UUID, expected_version: int, **fields
+        self, order_id: uuid.UUID, expected_version: int, **fields: object,
     ) -> Order | None:
         result = await self.session.execute(
             update(Order)

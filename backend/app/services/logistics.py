@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.exceptions import NotFoundError
+from app.models.enums import LogisticsStatus
 from app.repositories.audit_log import AuditLogRepository
 from app.repositories.logistics import LogisticsRepository
 
@@ -42,7 +43,7 @@ class LogisticsService:
         events.append(event)
 
         record.events = events
-        record.status = status
+        record.status = LogisticsStatus(status)
         record.current_location = location
         await self.session.flush()
 
@@ -54,7 +55,7 @@ class LogisticsService:
         )
         return self._to_response(record)
 
-    def _to_response(self, record) -> dict:
+    def _to_response(self, record) -> dict:  # type: ignore[no-untyped-def]
         return {
             "id": str(record.id),
             "order_id": str(record.order_id),

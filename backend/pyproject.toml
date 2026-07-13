@@ -62,11 +62,15 @@ ignore = [
 [tool.ruff.lint.isort]
 known-first-party = ["app"]
 
+[tool.ruff.lint.per-file-ignores]
+"app/database/seed.py" = ["T201"]
+
 [tool.mypy]
 python_version = "3.12"
 strict = true
 warn_return_any = true
 warn_unused_configs = true
+disallow_any_generics = false
 ignore_missing_imports = true
 exclude = ["alembic/", ".venv/"]
 

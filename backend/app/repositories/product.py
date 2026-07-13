@@ -53,7 +53,7 @@ class ProductRepository(BaseRepository):
         return list(result.scalars().all())
 
     async def update_with_version(
-        self, product_id: uuid.UUID, expected_version: int, **fields
+        self, product_id: uuid.UUID, expected_version: int, **fields: object,
     ) -> Product:
         result = await self.session.execute(
             update(Product)

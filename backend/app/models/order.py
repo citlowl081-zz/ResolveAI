@@ -4,11 +4,12 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import DateTime, Integer, Numeric, String, Text, func
+from sqlalchemy import DateTime, Enum, Integer, Numeric, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database.base import Base
+from app.models.enums import OrderStatus
 
 
 class Order(Base):
@@ -21,7 +22,10 @@ class Order(Base):
         UUID(as_uuid=True), nullable=False, index=True
     )
     order_number: Mapped[str] = mapped_column(String(30), unique=True, nullable=False, index=True)
-    status: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    status: Mapped[OrderStatus] = mapped_column(
+        Enum(OrderStatus, name="order_status", create_constraint=False),
+        nullable=False, index=True,
+    )
     total_amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     discount_amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, server_default="0")
     paid_amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, server_default="0")

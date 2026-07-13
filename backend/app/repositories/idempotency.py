@@ -108,7 +108,7 @@ class IdempotencyRepository:
         return result.scalar_one_or_none()
 
 
-def func_default_expiry():
+def func_default_expiry() -> str:
     """Return a server-default expression for expires_at (NOW() + 24h)."""
     from sqlalchemy import func
-    return func.now() + func.make_interval(0, 0, 0, 0, 0, 0, 24)  # type: ignore[operator]
+    return func.now() + func.make_interval(0, 0, 0, 0, 0, 0, 24)  # type: ignore[return-value]

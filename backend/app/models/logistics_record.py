@@ -3,11 +3,12 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, String, func
+from sqlalchemy import DateTime, Enum, String, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database.base import Base
+from app.models.enums import LogisticsStatus
 
 
 class LogisticsRecord(Base):
@@ -21,7 +22,10 @@ class LogisticsRecord(Base):
     )
     tracking_number: Mapped[str] = mapped_column(String(50), unique=True, nullable=False, index=True)
     carrier: Mapped[str] = mapped_column(String(50), nullable=False, server_default="SF Express")
-    status: Mapped[str] = mapped_column(String(50), nullable=False)
+    status: Mapped[LogisticsStatus] = mapped_column(
+        Enum(LogisticsStatus, name="logistics_status", create_constraint=False),
+        nullable=False,
+    )
     current_location: Mapped[str | None] = mapped_column(String(200), nullable=True)
     estimated_delivery: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     actual_delivery: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

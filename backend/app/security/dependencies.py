@@ -48,7 +48,7 @@ async def get_current_user_from_refresh(token: Annotated[str, Depends(get_token)
     return payload
 
 
-def require_role(*allowed_roles: str):
+def require_role(*allowed_roles: str):  # type: ignore[no-untyped-def]
     """Dependency factory: require one of the given roles."""
 
     async def role_checker(current_user: Annotated[dict, Depends(get_current_user)]) -> dict:

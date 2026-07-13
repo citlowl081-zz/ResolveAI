@@ -4,11 +4,12 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import Boolean, DateTime, Integer, Numeric, String, Text, func
+from sqlalchemy import Boolean, DateTime, Enum, Integer, Numeric, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database.base import Base
+from app.models.enums import ProductCategory
 
 
 class Product(Base):
@@ -19,7 +20,10 @@ class Product(Base):
     )
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    category: Mapped[str] = mapped_column(String(50), nullable=False)
+    category: Mapped[ProductCategory] = mapped_column(
+        Enum(ProductCategory, name="product_category", create_constraint=False),
+        nullable=False,
+    )
     price: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     stock: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
     image_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
