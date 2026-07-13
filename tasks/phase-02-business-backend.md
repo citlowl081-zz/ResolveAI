@@ -7,51 +7,47 @@ Implement the complete business logic layer. The original Phase 02 plan has been
 ## Revision History
 
 - **2026-07-13 (original):** Plan from Phase 00.
-- **2026-07-13 (revision 1):** Added model creation, enum creation, auth, product API, seed data, and business migration tasks moved from Phase 01.
-- **2026-07-13 (revision 2):** Split into Phase 02A (Core Commerce) and Phase 02B (After-sales) per user direction. The split avoids implementing all 17 tables and complex after-sales logic in one phase.
+- **2026-07-13 (r1):** Added model creation, enum creation, auth, product API, seed data — moved from Phase 01.
+- **2026-07-13 (r2):** Split into Phase 02A (Core Commerce) and Phase 02B (After-sales).
+- **2026-07-13 (r3):** Consistency corrections — INSERT ON CONFLICT idempotency, VARCHAR CHECK status, request_hash spec, expected_version, PAID cancel deferred, duplicate product aggregation, logistics FOR UPDATE, NUMERIC(12,2)+Decimal, Phase 02B enum migration strategy.
 
 ## Sub-Phases
 
-| Phase | Name | Status | Document |
-|-------|------|--------|----------|
-| 02A | Core Commerce Backend | ⬜ Pending | [phase-02A-core-commerce.md](phase-02A-core-commerce.md) |
-| 02B | After-sales Business Backend | ⬜ Pending | [phase-02B-after-sales.md](phase-02B-after-sales.md) |
+| Phase | Name | Status | Tables | Enums | Document |
+|-------|------|--------|--------|-------|----------|
+| 02A | Core Commerce Backend | ⬜ Pending | 8 | 5 | [phase-02A-core-commerce.md](phase-02A-core-commerce.md) |
+| 02B | After-sales Business Backend | ⬜ Pending | 3 (+2 ALTER) | 13 (+1 ALTER) | [phase-02B-after-sales.md](phase-02B-after-sales.md) |
 
 ## Split Rationale
 
-1. **Independent testability:** Phase 02A delivers a working e-commerce backend (auth, products, orders, logistics) without any after-sales logic. It can be tested end-to-end independently.
-2. **Incremental migration:** Each sub-phase has its own Alembic migration. Tables are added incrementally rather than all at once.
-3. **Reduced risk:** Smaller phases mean fewer changes per commit, easier rollback, and clearer acceptance criteria.
-4. **No empty tables:** Tables are created in the same phase where their business logic is implemented. No forward-declaration of schema without corresponding code.
+1. **Independent testability:** Phase 02A delivers a working e-commerce backend without after-sales logic.
+2. **Incremental migration:** Each sub-phase has its own Alembic migration.
+3. **Reduced risk:** Smaller phases mean fewer changes per commit, easier rollback.
+4. **No empty tables:** Tables are created in the same phase as their business logic.
+5. **Enum safety:** Phase 02B's order_status extension uses CREATE TYPE → CONVERT → DROP → RENAME pattern rather than ALTER TYPE ADD VALUE (which cannot be cleanly downgraded).
 
-## What Went Where
+## Entity Allocation
 
-| Original Phase 02 Task | → Phase 02A | → Phase 02B | → Later |
-|------------------------|-------------|-------------|---------|
-| Users, Products, Orders, OrderItems, Logistics models | ✅ | | |
-| AuditLog, SystemConfig models | ✅ | | |
-| IdempotencyRecord model | ✅ (added) | | |
-| AfterSalesTicket, RefundRecord, ReshipmentOrder models | | ✅ | |
-| ApprovalTask model | | | Phase 06 |
-| AgentSession, AgentMessage models | | | Phase 03 |
-| AgentToolLog, AgentTrace models | | | Phase 03 |
-| CustomerMemory model | | | Phase 05 |
-| PolicyDocument model | | | Phase 04 |
-| Auth (register, login, JWT, RBAC) | ✅ | | |
-| Product CRUD API | ✅ | | |
-| Order lifecycle API (create/pay/ship/deliver/cancel) | ✅ | | |
-| Logistics API | ✅ | | |
-| Audit logging | ✅ | | |
-| Seed data (users, products, orders) | ✅ | | |
-| After-sales eligibility, refund calc, risk rules | | ✅ | |
-| Ticket/Refund/Reshipment APIs | | ✅ | |
-| 18 PostgreSQL enums | 5 of 18 | remaining | |
+| Entity | Phase 02A | Phase 02B | Later |
+|--------|-----------|-----------|-------|
+| users, products, orders, order_items | ✅ | | |
+| logistics_records | ✅ | | |
+| audit_logs, system_configs | ✅ | | |
+| idempotency_records | ✅ | | |
+| after_sales_tickets, refund_records, reshipment_orders | | ✅ | |
+| order_status.REFUNDING, REFUNDED | | ✅ | |
+| order_items.is_refunded | | ✅ | |
+| PAID→CANCELLED (stock restore) | | ✅ | |
+| approval_tasks | | | Phase 06 |
+| agent_sessions, agent_messages | | | Phase 03 |
+| agent_tool_logs, agent_traces | | | Phase 03 |
+| customer_memories | | | Phase 05 |
+| policy_documents | | | Phase 04 |
 
 ## Preconditions (Shared)
 
-- Phase 01 completed (FastAPI app, DB infrastructure, health check, Alembic with pgvector, frontend scaffolds).
+- Phase 01 completed.
 - Test database available (PostgreSQL + pgvector).
-- All Phase 01 tests passing.
 
 ## Completion Record
 
