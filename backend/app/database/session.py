@@ -2,27 +2,28 @@
 
 from collections.abc import AsyncGenerator
 
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
+from app.config import settings
 from app.database.engine import create_engine
 
-_engine = create_engine()
-async_session_factory = async_sessionmaker(
-    _engine,
-    class_=AsyncSession,
-    expire_on_commit=False,
-)
+_engine: AsyncEngine | None = None
+_session_factory: async_sessionmaker[AsyncSession] | None = None
+
+
+def _get_session_factory() -> async_sessionmaker[AsyncSession]:
+    global _engine, _session_factory
+    if _engine is None:
+        _engine = create_engine(settings.resolved_database_url)
+    if _session_factory is None:
+        _session_factory = async_sessionmaker(_engine, class_=AsyncSession, expire_on_commit=False)
+    return _session_factory
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
-    """FastAPI dependency: yield an async database session.
-
-    Usage:
-        @router.get("/items")
-        async def list_items(db: AsyncSession = Depends(get_db)):
-            ...
-    """
-    async with async_session_factory() as session:
+    """FastAPI dependency: yield an async database session."""
+    factory = _get_session_factory()
+    async with factory() as session:
         try:
             yield session
             await session.commit()

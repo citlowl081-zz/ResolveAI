@@ -32,10 +32,10 @@ async def add_logistics_event(
     req: LogisticsEventRequest,
     request: Request,
     db: AsyncSession = Depends(get_db),
-    _op: dict = Depends(require_role("OPERATOR", "ADMIN")),
+    current_user: dict = Depends(require_role("OPERATOR", "ADMIN")),
     idempotency_key: str = Header(..., alias="Idempotency-Key"),
 ) -> APIResponse[dict]:
-    op_id = uuid.UUID("00000000-0000-0000-0000-000000000001")
+    op_id = uuid.UUID(current_user["sub"])
     idem_service = IdempotencyService(db)
     path = f"/api/v1/orders/{order_id}/logistics/events"
     rhash = compute_request_hash("POST", path, {"order_id": str(order_id)}, {}, req.model_dump())

@@ -12,7 +12,7 @@ from decimal import Decimal
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database.session import async_session_factory
+from app.database.session import _get_session_factory
 from app.models.enums import LogisticsStatus, OrderStatus
 from app.models.logistics_record import LogisticsRecord
 from app.models.order import Order
@@ -195,7 +195,8 @@ async def seed_orders(session: AsyncSession, users: dict, products: list[Product
 
 
 async def main() -> None:
-    async with async_session_factory() as session:
+    factory = _get_session_factory()
+    async with factory() as session:
         print("Seeding users...")  # noqa: T201
         users = await seed_users(session)
         print(f"  {len(users)} users present")
