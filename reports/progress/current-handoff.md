@@ -2,14 +2,17 @@
 
 **Date:** 2026-07-14
 **Generated:** After Phase 03 completion and CI verification
+**Updated:** Phase 04 planning revised (revision 4) — approved
 
 ---
 
 ## Current Phase
 
-**Phase 03 — Agent Tools: COMPLETE**
+**Phase 04 — RAG Knowledge Base: PLANNING** (implementation not started)
 
-Phase 03 implementation, testing, and CI verification are complete. Next phase is Phase 04 — RAG Knowledge Base (planning not yet started).
+Phase 03 — Agent Tools: COMPLETE
+
+Phase 03 implementation, testing, and CI verification are complete. Phase 04 planning is complete — plan has been revised and approved (revision 4). Implementation has NOT started.
 
 ---
 
@@ -146,7 +149,22 @@ b53d1ff [CI] Install Phase 03 runtime dependencies in backend tests
 
 ## Next Task
 
-**Phase 04 — RAG Knowledge Base** (planning not yet started).
+**Phase 04A — Policy Knowledge Base** (implementation not started).
+**Phase 04B — Agent RAG Integration** (not started).
+**Phase 04C — PDF/DOCX Upload** (not started, deferred).
+
+Phase 04 plan in `tasks/phase-04-rag.md` (revision 4, approved). Key design decisions:
+- `policy_key` + `version` model (UNIQUE(policy_key, version), one ACTIVE per key, advisory lock for concurrency)
+- `policy_key` validated against explicit prefix set (RET/REF/EXC/RES/LOG/RISK/SOP/GEN), prefix consistent with category
+- Status API targets exact (policy_key, version): `PATCH .../versions/{version}/status`
+- `GET /by-key/{key}` returns ACTIVE only (404 if none)
+- Ingestion idempotency compares against latest version (not just ACTIVE)
+- No new LangGraph node — uses existing tool-execution path
+- Chinese-friendly chunking + BLAKE2b bigram feature-hash mock embeddings
+- Exact cosine search (no IVFFlat), embedding TX boundary safety
+- YAML frontmatter (metadata) + body text (content); `effective_date` required
+- 04A = KB + retrieval, 04B = agent + eval, 04C = PDF/DOCX (optional)
+
 See `tasks/active-phase.md` for current phase pointer.
 
 ---

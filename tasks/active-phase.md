@@ -1,8 +1,8 @@
 # Active Phase
 
-**Current Phase:** Phase 03 — Agent Tools (COMPLETE)
+**Current Phase:** Phase 04 — RAG Knowledge Base (PLANNING)
 
-**Next Phase:** Phase 04 — RAG Knowledge Base (Not started)
+**Previous Phase:** Phase 03 — Agent Tools (COMPLETE)
 
 ## Phase 03 Status: ✅ COMPLETE
 
@@ -39,6 +39,17 @@ ResolveAI/
 - [Phase 02 — Business Backend (Index)](phase-02-business-backend.md) ✅
 - [Phase 03 — Agent Tools](phase-03-agent-tools.md) ✅
 
+## Phase 04 Status: PLANNING
+
+Phase 04 implementation plan has been written, revised, and approved (revision 4). See `tasks/phase-04-rag.md` for the complete plan.
+
+Phase 04 is split into:
+- **04A** — Policy Knowledge Base (data model, embeddings, chunking, ingestion, retrieval, admin API)
+- **04B** — Agent RAG Integration (tool, citations, evaluation)
+- **04C** — PDF/DOCX Upload (optional, deferred)
+
+**Implementation has NOT started.** Phase 04B and 04C have NOT started. Do NOT begin coding until explicitly instructed.
+
 ## Next Step
 
-Phase 04 — RAG Knowledge Base. Planning not yet started. Do NOT begin implementation until Phase 03 is fully closed (documentation complete, handoff updated, CI confirmed green).
+Phase 04A Batch 1 implementation: enums (policy_key prefix validation), settings revision, data models (policy_key + version keyed), migration 005 (vector(1536) fixed).
