@@ -61,6 +61,7 @@ jobs:
         run: pytest -v
         env:
           DATABASE_URL: postgresql+asyncpg://resolveai:resolveai-test@localhost:5432/resolveai_test
+          LLM_PROVIDER: mock
 
   frontend-customer:
     name: Frontend — Customer Web
