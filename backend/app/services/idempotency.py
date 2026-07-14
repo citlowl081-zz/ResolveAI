@@ -97,3 +97,21 @@ class IdempotencyService:
         record = await self.repo.get_for_update(user_id, operation, idempotency_key)
         if record is not None:
             await self.repo.complete(record.id, response_status, response_body, resource_id)
+
+    async def bind_resource(
+        self,
+        user_id: uuid.UUID,
+        operation: str,
+        idempotency_key: str,
+        resource_id: uuid.UUID,
+    ) -> bool:
+        """Early-bind a resource_id to a PROCESSING idempotency record.
+
+        Only succeeds when the record is PROCESSING and the resource_id is
+        not already bound to a different value.
+        Returns True if binding was applied.
+        """
+        record = await self.repo.get_for_update(user_id, operation, idempotency_key)
+        if record is None:
+            return False
+        return await self.repo.bind_resource(record.id, resource_id)

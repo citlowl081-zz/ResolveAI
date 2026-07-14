@@ -101,6 +101,29 @@ class IdempotencyRepository:
             )
         )
 
+    async def bind_resource(
+        self,
+        record_id: uuid.UUID,
+        resource_id: uuid.UUID,
+    ) -> bool:
+        """Early-bind a resource_id to a PROCESSING idempotency record.
+
+        Only succeeds when the record is PROCESSING and resource_id is NULL
+        (or already set to the same value — idempotent).
+        Returns True if the update was applied.
+        """
+        result = await self.session.execute(
+            update(IdempotencyRecord)
+            .where(IdempotencyRecord.id == record_id)
+            .where(IdempotencyRecord.status == "PROCESSING")
+            .where(
+                (IdempotencyRecord.resource_id.is_(None))
+                | (IdempotencyRecord.resource_id == resource_id)
+            )
+            .values(resource_id=resource_id)
+        )
+        return result.rowcount is not None and result.rowcount > 0  # type: ignore[attr-defined]
+
     async def _get_by_id(self, record_id: uuid.UUID) -> IdempotencyRecord | None:
         result = await self.session.execute(
             select(IdempotencyRecord).where(IdempotencyRecord.id == record_id)
