@@ -54,7 +54,7 @@ async def _create_and_pay(client: AsyncClient, auth: dict, admin_auth: dict) -> 
         json={"expected_version": order["version"]},
         headers={**headers, "Idempotency-Key": _idem_key()},
     )
-    return pay.json()["data"]
+    return pay.json()["data"]  # type: ignore[no-any-return]
 
 
 class TestAgentSessionCreation:
@@ -62,7 +62,7 @@ class TestAgentSessionCreation:
 
     async def test_create_session_and_get_response(
         self, async_client: AsyncClient,
-    ):
+    ) -> None:
         """POST /agent/sessions creates a session and returns a response."""
         auth = await _register_and_login(
             async_client,
@@ -83,7 +83,7 @@ class TestAgentSessionCreation:
 
     async def test_multi_turn_conversation(
         self, async_client: AsyncClient, admin_auth: dict,
-    ):
+    ) -> None:
         """3-turn conversation with session persistence."""
         auth = await _register_and_login(
             async_client,
@@ -120,7 +120,7 @@ class TestAgentSessionCreation:
 
     async def test_session_stays_active_after_query(
         self, async_client: AsyncClient, admin_auth: dict,
-    ):
+    ) -> None:
         """Session remains ACTIVE after a read-only query turn."""
         auth = await _register_and_login(
             async_client,
@@ -144,7 +144,7 @@ class TestAgentSessionCreation:
 
     async def test_close_session(
         self, async_client: AsyncClient,
-    ):
+    ) -> None:
         """POST /close transitions session to COMPLETED."""
         auth = await _register_and_login(
             async_client,
@@ -171,7 +171,7 @@ class TestAgentRBAC:
 
     async def test_cross_user_session_access_denied(
         self, async_client: AsyncClient,
-    ):
+    ) -> None:
         """User A cannot access User B's session."""
         auth_a = await _register_and_login(
             async_client,
@@ -196,7 +196,7 @@ class TestAgentRBAC:
 
     async def test_refresh_token_rejected(
         self, async_client: AsyncClient,
-    ):
+    ) -> None:
         """Refresh token cannot access Agent endpoints."""
         auth = await _register_and_login(
             async_client,
@@ -217,7 +217,7 @@ class TestAgentIdempotency:
 
     async def test_same_key_replay(
         self, async_client: AsyncClient,
-    ):
+    ) -> None:
         """Same Idempotency-Key + same body returns cached response."""
         auth = await _register_and_login(
             async_client,
@@ -240,7 +240,7 @@ class TestAgentIdempotency:
 
     async def test_same_key_different_body(
         self, async_client: AsyncClient,
-    ):
+    ) -> None:
         """Same key with different body returns 409."""
         auth = await _register_and_login(
             async_client,
@@ -266,7 +266,7 @@ class TestAgentConcurrency:
 
     async def test_concurrent_request_blocked(
         self, async_client: AsyncClient,
-    ):
+    ) -> None:
         """Two concurrent POSTs to same session → second returns 409."""
         auth = await _register_and_login(
             async_client,
@@ -303,7 +303,7 @@ class TestAgentAdminTraces:
 
     async def test_admin_can_list_traces(
         self, async_client: AsyncClient, admin_auth: dict,
-    ):
+    ) -> None:
         """OPERATOR/ADMIN can list traces."""
         auth = await _register_and_login(
             async_client,
@@ -324,7 +324,7 @@ class TestAgentAdminTraces:
 
     async def test_customer_cannot_list_traces(
         self, async_client: AsyncClient,
-    ):
+    ) -> None:
         """CUSTOMER cannot access admin trace endpoint."""
         auth = await _register_and_login(
             async_client,
@@ -338,7 +338,7 @@ class TestAgentAdminTraces:
 
     async def test_admin_can_list_tool_logs(
         self, async_client: AsyncClient, admin_auth: dict,
-    ):
+    ) -> None:
         """OPERATOR/ADMIN can list tool logs."""
         resp = await async_client.get(
             "/api/v1/admin/agent/tool-logs", headers=admin_auth["headers"],

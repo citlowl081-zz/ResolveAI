@@ -13,6 +13,7 @@ Each test is self-contained — no seed data dependency.
 import json
 import uuid
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 import pytest
 from httpx import AsyncClient
@@ -88,10 +89,10 @@ async def _create_product_and_paid_order(
         headers={**headers, "Idempotency-Key": _idem_key()},
     )
     assert pay.status_code == 200, f"Order payment failed: {pay.text}"
-    return pay.json()["data"]
+    return pay.json()["data"]  # type: ignore[no-any-return]
 
 
-def _setup_mock_provider(monkeypatch, responses=None):
+def _setup_mock_provider(monkeypatch: Any, responses: list[ChatResponse] | None = None) -> MockProvider:
     """Configure the app to use a MockProvider with optional pre-programmed responses.
 
     Patches ``_get_orchestrator`` in the agent API module so every request
@@ -116,7 +117,7 @@ def _setup_mock_provider(monkeypatch, responses=None):
     provider = MockProvider(responses=list(responses) if responses else None)
 
     def _patched_get_orchestrator() -> AgentOrchestrator:
-        graph = build_agent_graph()
+        graph = build_agent_graph()  # type: ignore[no-untyped-call]
         factory = _get_session_factory()
         return AgentOrchestrator(session_factory=factory, graph=graph, llm=provider)
 
@@ -191,8 +192,8 @@ class TestModelProviderIntegration:
     """Verify MockProvider is called correctly with proper message structure."""
 
     async def test_classify_intent_calls_mock_provider(
-        self, async_client: AsyncClient, monkeypatch,
-    ):
+        self, async_client: AsyncClient, monkeypatch: Any,
+    ) -> None:
         """classify_intent node should call the mock provider via chat_structured.
 
         The call_history must contain a request whose system message describes
@@ -245,8 +246,8 @@ class TestModelProviderIntegration:
         assert classify_req.max_tokens == 256
 
     async def test_compose_response_calls_mock_provider(
-        self, async_client: AsyncClient, admin_auth: dict, monkeypatch,
-    ):
+        self, async_client: AsyncClient, admin_auth: dict, monkeypatch: Any,
+    ) -> None:
         """compose_response must call the provider with sanitized tool results.
 
         After tools execute, the compose_response node sends tool results to
@@ -304,8 +305,8 @@ class TestModelProviderIntegration:
             )
 
     async def test_mock_provider_structured_intent_affects_routing(
-        self, async_client: AsyncClient, admin_auth: dict, monkeypatch,
-    ):
+        self, async_client: AsyncClient, admin_auth: dict, monkeypatch: Any,
+    ) -> None:
         """Pre-program QUALITY_REFUND intent → select_tools must include tools.
 
         When the LLM returns QUALITY_REFUND with high confidence, the agent
@@ -393,8 +394,8 @@ class TestModelProviderIntegration:
         )
 
     async def test_no_api_key_works_with_mock_mode(
-        self, async_client: AsyncClient, monkeypatch,
-    ):
+        self, async_client: AsyncClient, monkeypatch: Any,
+    ) -> None:
         """Agent must work with LLM_PROVIDER=mock and no API key set.
 
         Even when llm_api_key is empty, the mock provider should be used
@@ -442,8 +443,8 @@ class TestPendingActionE2E:
     """End-to-end tests for pending action lifecycle."""
 
     async def test_pending_action_built_from_llm_output(
-        self, async_client: AsyncClient, admin_auth: dict, monkeypatch,
-    ):
+        self, async_client: AsyncClient, admin_auth: dict, monkeypatch: Any,
+    ) -> None:
         """When the LLM proposes a create_ticket action, proposed_actions
         must contain NO internal UUIDs (order_id, order_item_id, product_id).
         """
@@ -511,8 +512,8 @@ class TestPendingActionE2E:
             )
 
     async def test_confirm_action_id_executes_persisted_params(
-        self, async_client: AsyncClient, admin_auth: dict, monkeypatch,
-    ):
+        self, async_client: AsyncClient, admin_auth: dict, monkeypatch: Any,
+    ) -> None:
         """When confirming a pending action, the tool must use
         canonical_tool_input from the DB, NOT from client-supplied params.
         """
@@ -575,7 +576,7 @@ class TestPendingActionE2E:
         provider2 = MockProvider(responses=[confirm_classify, confirm_compose])
 
         def _patched2() -> AgentOrchestrator:
-            graph = build_agent_graph()
+            graph = build_agent_graph()  # type: ignore[no-untyped-call]
             factory = _get_session_factory()
             return AgentOrchestrator(
                 session_factory=factory, graph=graph, llm=provider2,
@@ -613,8 +614,8 @@ class TestPendingActionE2E:
             assert ticket["requested_items"] is not None
 
     async def test_client_cannot_inject_internal_ids(
-        self, async_client: AsyncClient, admin_auth: dict, monkeypatch,
-    ):
+        self, async_client: AsyncClient, admin_auth: dict, monkeypatch: Any,
+    ) -> None:
         """A malicious client sending extra fields in a confirm request
         must NOT have those fields used; only canonical_tool_input is used.
         """
@@ -679,7 +680,7 @@ class TestPendingActionE2E:
         )
 
         def _patched2() -> AgentOrchestrator:
-            graph = build_agent_graph()
+            graph = build_agent_graph()  # type: ignore[no-untyped-call]
             factory = _get_session_factory()
             return AgentOrchestrator(
                 session_factory=factory, graph=graph, llm=provider2,
@@ -726,7 +727,7 @@ class TestPendingActionE2E:
                 f"got {items[0].get('reason_code')}"
             )
 
-    async def test_wrong_product_name_in_pending_action(self):
+    async def test_wrong_product_name_in_pending_action(self) -> None:
         """PendingActionBuilder must return None when product names don't match."""
         order_context = {
             "id": str(uuid.uuid4()),
@@ -759,8 +760,8 @@ class TestPendingActionE2E:
         )
 
     async def test_expired_pending_action_rejected(
-        self, async_client: AsyncClient, admin_auth: dict, monkeypatch,
-    ):
+        self, async_client: AsyncClient, admin_auth: dict, monkeypatch: Any,
+    ) -> None:
         """A pending_action with an expiry in the past must return
         ACTION_EXPIRED (terminal error).
         """
@@ -834,8 +835,8 @@ class TestPendingActionE2E:
                 )
 
     async def test_already_consumed_action_rejected(
-        self, async_client: AsyncClient, admin_auth: dict, monkeypatch,
-    ):
+        self, async_client: AsyncClient, admin_auth: dict, monkeypatch: Any,
+    ) -> None:
         """A pending_action with status=CONSUMED must return
         ACTION_ALREADY_CONSUMED (409/terminal error).
         """
@@ -921,8 +922,8 @@ class TestPendingActionE2E:
             )
 
     async def test_duplicate_action_confirm_rejected(
-        self, async_client: AsyncClient, admin_auth: dict, monkeypatch,
-    ):
+        self, async_client: AsyncClient, admin_auth: dict, monkeypatch: Any,
+    ) -> None:
         """Confirming the same action_id twice must reject the second attempt.
 
         First confirm consumes the action (status -> CONSUMED).
@@ -983,7 +984,7 @@ class TestPendingActionE2E:
         provider1 = MockProvider(responses=[classify1, compose1])
 
         def _patched1() -> AgentOrchestrator:
-            graph = build_agent_graph()
+            graph = build_agent_graph()  # type: ignore[no-untyped-call]
             factory = _get_session_factory()
             return AgentOrchestrator(
                 session_factory=factory, graph=graph, llm=provider1,
@@ -1049,8 +1050,8 @@ class TestResourceOwnership:
     """Verify that agent tools enforce resource ownership."""
 
     async def test_get_logistics_requires_ownership(
-        self, async_client: AsyncClient, admin_auth: dict, monkeypatch,
-    ):
+        self, async_client: AsyncClient, admin_auth: dict, monkeypatch: Any,
+    ) -> None:
         """User B must NOT be able to query logistics for User A's order.
 
         The agent's execute_tool node verifies order ownership before
@@ -1125,8 +1126,8 @@ class TestResourceOwnership:
         )
 
     async def test_cross_user_agent_tool_enforces_ownership(
-        self, async_client: AsyncClient, admin_auth: dict, monkeypatch,
-    ):
+        self, async_client: AsyncClient, admin_auth: dict, monkeypatch: Any,
+    ) -> None:
         """Agent tool execution must verify ownership at the service layer.
 
         If the agent somehow tries to get_logistics for another user's order,
@@ -1180,8 +1181,8 @@ class TestLLMDataMinimization:
     """Verify that no PII or internal identifiers leak into LLM messages."""
 
     async def test_no_pii_in_llm_messages(
-        self, async_client: AsyncClient, admin_auth: dict, monkeypatch,
-    ):
+        self, async_client: AsyncClient, admin_auth: dict, monkeypatch: Any,
+    ) -> None:
         """After a full agent turn, inspect ALL ChatMessage content and
         tool_input sent to the LLM.  None of these may contain user_id,
         email, shipping_address, or JWT tokens.
@@ -1224,7 +1225,7 @@ class TestLLMDataMinimization:
         provider = MockProvider(responses=[classify_resp, compose_resp])
 
         def _patched() -> AgentOrchestrator:
-            graph = build_agent_graph()
+            graph = build_agent_graph()  # type: ignore[no-untyped-call]
             factory = _get_session_factory()
             return AgentOrchestrator(
                 session_factory=factory, graph=graph, llm=provider,
@@ -1297,8 +1298,8 @@ class TestLLMDataMinimization:
                         pass  # Tool call args contain UUIDs by design
 
     async def test_sanitization_strips_order_fields(
-        self, async_client: AsyncClient, admin_auth: dict, monkeypatch,
-    ):
+        self, async_client: AsyncClient, admin_auth: dict, monkeypatch: Any,
+    ) -> None:
         """Verify that the sanitization module strips fields like id,
         product_id, and order_item_id from tool results before LLM exposure.
         """
@@ -1358,7 +1359,7 @@ class TestLLMDataMinimization:
 
     async def test_strip_pii_from_dict_recursive(
         self,
-    ):
+    ) -> None:
         """strip_pii_from_dict must recursively remove PII fields at all levels."""
         from app.agent.sanitization import strip_pii_from_dict
 
@@ -1413,13 +1414,13 @@ class TestLLMDataMinimization:
 class TestValidatePendingAction:
     """Direct unit tests for validate_pending_action edge cases."""
 
-    def test_validate_none_pending_action(self):
+    def test_validate_none_pending_action(self) -> None:
         """None pending_action should return ACTION_NOT_FOUND."""
         is_valid, code = validate_pending_action(None, "some-id")
         assert is_valid is False
         assert code == "ACTION_NOT_FOUND"
 
-    def test_validate_mismatched_action_id(self):
+    def test_validate_mismatched_action_id(self) -> None:
         """Mismatched action_id should return ACTION_NOT_FOUND."""
         pa = {
             "action_id": "real-id",
@@ -1430,7 +1431,7 @@ class TestValidatePendingAction:
         assert is_valid is False
         assert code == "ACTION_NOT_FOUND"
 
-    def test_validate_consumed_action(self):
+    def test_validate_consumed_action(self) -> None:
         """CONSUMED status should return ACTION_ALREADY_CONSUMED."""
         pa = {
             "action_id": "action-1",
@@ -1441,7 +1442,7 @@ class TestValidatePendingAction:
         assert is_valid is False
         assert code == "ACTION_ALREADY_CONSUMED"
 
-    def test_validate_expired_action(self):
+    def test_validate_expired_action(self) -> None:
         """Past expiry should return ACTION_EXPIRED."""
         pa = {
             "action_id": "action-1",
@@ -1452,7 +1453,7 @@ class TestValidatePendingAction:
         assert is_valid is False
         assert code == "ACTION_EXPIRED"
 
-    def test_validate_valid_action(self):
+    def test_validate_valid_action(self) -> None:
         """Valid pending action should return (True, None)."""
         pa = {
             "action_id": "action-1",
@@ -1463,7 +1464,7 @@ class TestValidatePendingAction:
         assert is_valid is True
         assert code is None
 
-    def test_build_proposed_action_response_no_internal_ids(self):
+    def test_build_proposed_action_response_no_internal_ids(self) -> None:
         """build_proposed_action_response must strip internal UUIDs."""
         pending_action = {
             "action_id": "act-123",
@@ -1508,7 +1509,7 @@ class TestValidatePendingAction:
 class TestMockProviderDirect:
     """Verify MockProvider behaviour directly (no HTTP layer)."""
 
-    def test_mock_provider_records_call_history(self):
+    def test_mock_provider_records_call_history(self) -> None:
         """Every call must be appended to call_history in order."""
         provider = MockProvider()
 
@@ -1524,7 +1525,7 @@ class TestMockProviderDirect:
         assert provider._responses == []
 
     @pytest.mark.asyncio
-    async def test_mock_provider_returns_programmed_responses(self):
+    async def test_mock_provider_returns_programmed_responses(self) -> None:
         """Pre-programmed responses must be returned in FIFO order."""
         r1 = ChatResponse(content="response 1", model="mock")
         r2 = ChatResponse(content="response 2", model="mock")
@@ -1549,7 +1550,7 @@ class TestMockProviderDirect:
         assert len(provider.call_history) == 3
 
     @pytest.mark.asyncio
-    async def test_mock_provider_structured_default(self):
+    async def test_mock_provider_structured_default(self) -> None:
         """chat_structured default response must be valid JSON."""
         provider = MockProvider()
         req = ChatRequest(

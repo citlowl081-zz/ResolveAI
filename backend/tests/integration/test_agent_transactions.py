@@ -35,7 +35,7 @@ class TestTransactionBoundaries:
 
     async def test_session_active_after_success(
         self, async_client: AsyncClient,
-    ):
+    ) -> None:
         """After a successful agent turn, the session exists and has message rows."""
         auth = await _register_and_login(
             async_client,
@@ -56,12 +56,14 @@ class TestTransactionBoundaries:
                 text("SELECT COUNT(*) as cnt FROM agent_messages WHERE session_id = :sid"),
                 {"sid": uuid.UUID(session_id)},
             )
-            count = result.fetchone().cnt
+            row = result.fetchone()
+            assert row is not None
+            count = row.cnt
             assert count >= 1, "At least one message must be persisted"
 
     async def test_tool_execution_creates_tool_log(
         self, async_client: AsyncClient, admin_auth: dict,
-    ):
+    ) -> None:
         """When tools are executed, agent_tool_logs rows are created."""
         auth = await _register_and_login(
             async_client,
@@ -102,12 +104,14 @@ class TestTransactionBoundaries:
             result = await session.execute(
                 text("SELECT COUNT(*) as cnt FROM agent_tool_logs")
             )
-            count = result.fetchone().cnt
+            row = result.fetchone()
+            assert row is not None
+            count = row.cnt
             assert count >= 1, "Tool execution must create tool log rows"
 
     async def test_turn_cleared_after_success(
         self, async_client: AsyncClient,
-    ):
+    ) -> None:
         """After success TX-B, active_turn is cleared for the specific session."""
         auth = await _register_and_login(
             async_client,
@@ -146,7 +150,7 @@ class TestTransactionBoundaries:
 
     async def test_idempotency_consistent_after_turn(
         self, async_client: AsyncClient,
-    ):
+    ) -> None:
         """Idempotency record transitions from PROCESSING to COMPLETED after turn."""
         auth = await _register_and_login(
             async_client,
@@ -179,7 +183,7 @@ class TestMessageSequenceAndPersistence:
 
     async def test_messages_have_unique_sequence(
         self, async_client: AsyncClient,
-    ):
+    ) -> None:
         """Messages within a session have strictly increasing sequence numbers."""
         auth = await _register_and_login(
             async_client,
@@ -206,7 +210,7 @@ class TestMessageSequenceAndPersistence:
 
     async def test_turn_sequence_scheme(
         self, async_client: AsyncClient, admin_auth: dict,
-    ):
+    ) -> None:
         """Verify turn_sequence scheme: 0=USER, 10=TOOL_CALL, 20+N=TOOL, 100=ASSISTANT."""
         auth = await _register_and_login(
             async_client,

@@ -34,7 +34,7 @@ class TestActiveTurnLifecycle:
 
     async def test_turn_cleared_after_success(
         self, async_client: AsyncClient,
-    ):
+    ) -> None:
         """After a successful turn, active_turn_* columns are NULL."""
         auth = await _register_and_login(
             async_client,
@@ -64,7 +64,7 @@ class TestActiveTurnLifecycle:
 
     async def test_turn_acquired_during_active_request(
         self, async_client: AsyncClient,
-    ):
+    ) -> None:
         """During a turn, active_turn_id is NOT NULL."""
         auth = await _register_and_login(
             async_client,
@@ -85,7 +85,7 @@ class TestActiveTurnLifecycle:
 
     async def test_same_key_replay_returns_cached(
         self, async_client: AsyncClient,
-    ):
+    ) -> None:
         """Same Idempotency-Key replay returns cached response without re-execution."""
         auth = await _register_and_login(
             async_client,
@@ -114,7 +114,7 @@ class TestSameKeyRecovery:
 
     async def test_same_key_reuses_session(
         self, async_client: AsyncClient,
-    ):
+    ) -> None:
         """Same key retry finds existing session via resource_id binding."""
         auth = await _register_and_login(
             async_client,
@@ -139,7 +139,7 @@ class TestSameKeyRecovery:
 
     async def test_no_duplicate_user_message_on_replay(
         self, async_client: AsyncClient,
-    ):
+    ) -> None:
         """Same-key replay does NOT insert a second USER message."""
         auth = await _register_and_login(
             async_client,
@@ -166,7 +166,9 @@ class TestSameKeyRecovery:
             )
             # There should be exactly 1 USER message per unique request
             # (other tests also create USER messages, so we just verify >= 1)
-            count = result.fetchone().cnt
+            row = result.fetchone()
+            assert row is not None
+            count = row.cnt
             assert count >= 1, "At least one USER message must exist"
 
 
@@ -175,7 +177,7 @@ class TestIdempotencyAndTurnState:
 
     async def test_idempotency_processing_after_recoverable(
         self, async_client: AsyncClient,
-    ):
+    ) -> None:
         """After a successful turn, idempotency record is COMPLETED."""
         auth = await _register_and_login(
             async_client,
@@ -206,7 +208,7 @@ class TestIdempotencyAndTurnState:
 
     async def test_different_key_new_turn(
         self, async_client: AsyncClient,
-    ):
+    ) -> None:
         """Different idempotency keys create different turns."""
         auth = await _register_and_login(
             async_client,
@@ -230,7 +232,7 @@ class TestIdempotencyAndTurnState:
 
     async def test_session_stays_active_after_turn(
         self, async_client: AsyncClient,
-    ):
+    ) -> None:
         """Session remains ACTIVE after any number of turns."""
         auth = await _register_and_login(
             async_client,
@@ -255,7 +257,7 @@ class TestStateCorruption:
 
     async def test_processing_with_null_active_turn_detected(
         self, async_client: AsyncClient,
-    ):
+    ) -> None:
         """If idempotency is PROCESSING but active_turn_id is NULL, corruption."""
         auth = await _register_and_login(
             async_client,
