@@ -1,6 +1,10 @@
 """SQLAlchemy ORM models."""
 
 from app.models.after_sales_ticket import AfterSalesTicket
+from app.models.agent_message import AgentMessage
+from app.models.agent_session import AgentSession
+from app.models.agent_tool_log import AgentToolLog
+from app.models.agent_trace import AgentTrace
 from app.models.audit_log import AuditLog
 from app.models.idempotency_record import IdempotencyRecord
 from app.models.logistics_record import LogisticsRecord
@@ -24,4 +28,8 @@ __all__ = [
     "AfterSalesTicket",
     "RefundRecord",
     "ReshipmentOrder",
+    "AgentSession",
+    "AgentMessage",
+    "AgentToolLog",
+    "AgentTrace",
 ]

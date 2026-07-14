@@ -77,3 +77,16 @@ class ReshipmentStatus(enum.StrEnum):
     SHIPPED = "SHIPPED"
     DELIVERED = "DELIVERED"
     CANCELLED = "CANCELLED"
+
+
+class SessionStatus(enum.StrEnum):
+    ACTIVE = "ACTIVE"
+    COMPLETED = "COMPLETED"
+    EXPIRED = "EXPIRED"
+
+
+class MessageRole(enum.StrEnum):
+    USER = "USER"
+    ASSISTANT = "ASSISTANT"
+    TOOL = "TOOL"
+    SYSTEM = "SYSTEM"
