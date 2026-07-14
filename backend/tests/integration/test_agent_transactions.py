@@ -5,6 +5,7 @@ failed tool log independent persistence, TX-B atomicity.
 """
 
 import uuid
+from typing import Any
 
 from httpx import AsyncClient
 from sqlalchemy import text
@@ -62,9 +63,39 @@ class TestTransactionBoundaries:
             assert count >= 1, "At least one message must be persisted"
 
     async def test_tool_execution_creates_tool_log(
-        self, async_client: AsyncClient, admin_auth: dict,
+        self, async_client: AsyncClient, admin_auth: dict, monkeypatch: Any,
     ) -> None:
         """When tools are executed, agent_tool_logs rows are created."""
+        import app.api.v1.agent as agent_module
+        from app.agent.graph import build_agent_graph
+        from app.agent.orchestrator import AgentOrchestrator
+        from app.database.session import _get_session_factory as agent_sf
+        from app.llm.mock_provider import MockProvider
+        from app.llm.provider import ChatResponse
+
+        # ── Set up isolated MockProvider with pre-programmed responses ──
+        classify_resp = ChatResponse(
+            content='{"intent":"QUALITY_REFUND","confidence":0.95,"extracted_entities":{}}',
+            finish_reason="stop", model="mock",
+            usage={"prompt_tokens": 10, "completion_tokens": 10, "total_tokens": 20},
+            latency_ms=1,
+        )
+        compose_resp = ChatResponse(
+            content='{"response":"已为您查询订单信息。"}',
+            finish_reason="stop", model="mock",
+            usage={"prompt_tokens": 10, "completion_tokens": 10, "total_tokens": 20},
+            latency_ms=1,
+        )
+        isolated_provider = MockProvider(responses=[classify_resp, compose_resp])
+
+        # Monkeypatch the orchestrator factory to inject isolated provider
+        sessionmaker = agent_sf()
+        def _patched_get_orchestrator() -> AgentOrchestrator:
+            graph = build_agent_graph()  # type: ignore[no-untyped-call]
+            return AgentOrchestrator(session_factory=sessionmaker, graph=graph, llm=isolated_provider)
+
+        monkeypatch.setattr(agent_module, "_get_orchestrator", _patched_get_orchestrator)
+
         auth = await _register_and_login(
             async_client,
             f"tx-tool-{uuid.uuid4().hex[:8]}@test.com",
@@ -94,20 +125,24 @@ class TestTransactionBoundaries:
 
         # Send agent message that triggers tool execution
         resp = await async_client.post("/api/v1/agent/sessions", json={
-            "message": "查询订单状态",
+            "message": "我的产品有质量问题，需要退款",
         }, headers={**auth["headers"], "Idempotency-Key": _idem_key()})
         assert resp.status_code == 201
+        session_id = uuid.UUID(resp.json()["data"]["session_id"])
 
-        from app.database.session import _get_session_factory
-        factory = _get_session_factory()
+        # Verify tool logs exist for THIS session
+        factory = agent_sf()
         async with factory() as session:
             result = await session.execute(
-                text("SELECT COUNT(*) as cnt FROM agent_tool_logs")
+                text("SELECT COUNT(*) as cnt FROM agent_tool_logs WHERE session_id = :sid"),
+                {"sid": session_id},
             )
             row = result.fetchone()
             assert row is not None
             count = row.cnt
-            assert count >= 1, "Tool execution must create tool log rows"
+            assert count >= 1, (
+                f"Tool execution must create tool log rows for session {session_id}"
+            )
 
     async def test_turn_cleared_after_success(
         self, async_client: AsyncClient,

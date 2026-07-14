@@ -122,6 +122,13 @@ async def operator_auth(async_client: AsyncClient) -> dict:
     }
 
 
+@pytest_asyncio.fixture(autouse=True)  # type: ignore[type-var]
+def _reset_agent_provider() -> None:
+    """Reset global ModelProvider after each test to prevent cross-test leakage."""
+    from app.agent.provider import set_provider
+    set_provider(None)
+
+
 @pytest_asyncio.fixture
 async def test_product(async_client: AsyncClient, admin_auth: dict) -> dict:
     """Create a test product and return its data."""
