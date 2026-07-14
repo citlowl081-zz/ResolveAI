@@ -30,6 +30,7 @@ class OrderStatus(enum.StrEnum):
     SHIPPED = "SHIPPED"
     DELIVERED = "DELIVERED"
     CANCELLED = "CANCELLED"
+    REFUNDED = "REFUNDED"
 
 
 class LogisticsStatus(enum.StrEnum):
@@ -39,3 +40,40 @@ class LogisticsStatus(enum.StrEnum):
     OUT_FOR_DELIVERY = "OUT_FOR_DELIVERY"
     DELIVERED = "DELIVERED"
     RETURNED = "RETURNED"
+
+
+class IntentType(enum.StrEnum):
+    LOGISTICS_INQUIRY = "LOGISTICS_INQUIRY"
+    PRE_SHIP_REFUND = "PRE_SHIP_REFUND"
+    QUALITY_REFUND = "QUALITY_REFUND"
+    EXCHANGE = "EXCHANGE"
+    MISSING_PARTS = "MISSING_PARTS"
+    OTHER = "OTHER"
+
+
+class TicketStatus(enum.StrEnum):
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"
+    NEEDS_REVIEW = "NEEDS_REVIEW"
+
+
+class ResolutionType(enum.StrEnum):
+    REFUND = "REFUND"
+    EXCHANGE = "EXCHANGE"
+    RESHIPMENT = "RESHIPMENT"
+    INFO_ONLY = "INFO_ONLY"
+
+
+class RefundType(enum.StrEnum):
+    FULL = "FULL"
+    PARTIAL = "PARTIAL"
+    SHIPPING_FEE = "SHIPPING_FEE"
+
+
+class ReshipmentStatus(enum.StrEnum):
+    CREATED = "CREATED"
+    SHIPPED = "SHIPPED"
+    DELIVERED = "DELIVERED"
+    CANCELLED = "CANCELLED"
