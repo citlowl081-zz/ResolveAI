@@ -49,32 +49,36 @@ class Settings(BaseSettings):
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",")]
 
-    # ---- LLM (unused in Phase 01, needed by Phase 03+) ----
+    # ---- LLM (Phase 03+) ----
     llm_provider: str = "anthropic"
     llm_model: str = "claude-sonnet-5-20251001"
     llm_api_key: str = ""
     llm_base_url: str = "https://api.anthropic.com"
     llm_max_tokens: int = 4096
-    llm_temperature: float = 0.1
+    llm_temperature: float = 0.3
     llm_timeout_seconds: int = 60
+    llm_max_retries: int = 1
 
-    # ---- Embedding (unused in Phase 01, needed by Phase 04+) ----
+    # ---- Embedding (Phase 04+) ----
     embedding_provider: str = "openai"
     embedding_model: str = "text-embedding-3-small"
     embedding_api_key: str = ""
     embedding_dimension: int = 1536
 
-    # ---- JWT (unused in Phase 01, needed by Phase 02+) ----
+    # ---- JWT (Phase 02+) ----
     jwt_secret_key: str = "dev-secret-change-in-production"
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 30
     jwt_refresh_token_expire_days: int = 7
 
-    # ---- Agent (unused in Phase 01, needed by Phase 03+) ----
-    agent_max_retries: int = 2
+    # ---- Agent (Phase 03+) ----
+    agent_context_token_budget: int = 8000
+    agent_max_messages_per_session: int = 100
+    agent_max_tools_per_turn: int = 5
+    agent_max_loops_per_turn: int = 3
     agent_tool_timeout_seconds: int = 30
-    agent_session_ttl_minutes: int = 60
-    agent_high_risk_amount_threshold: float = 1000.00
+    agent_turn_expiry_seconds: int = 90
+    agent_pending_action_expiry_seconds: int = 300
     agent_max_concurrent_sessions: int = 10
 
     # ---- Rate Limiting ----
