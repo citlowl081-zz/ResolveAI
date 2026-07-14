@@ -15,6 +15,7 @@ def _estimate_tokens(text: str) -> int:
 
 async def build_context(state: AgentState) -> AgentState:
     state["current_node"] = "build_context"
+    state.setdefault("node_timings", []).append({"node": "build_context"})
     user_id = uuid.UUID(state["user_id"])
     session_id = uuid.UUID(state["session_id"])
 

@@ -7,6 +7,7 @@ RETRYABLE_CODES = {"TOOL_TIMEOUT", "LLM_ERROR"}
 
 async def handle_tool_error(state: AgentState) -> AgentState:
     state["current_node"] = "handle_tool_error"
+    state.setdefault("node_timings", []).append({"node": "handle_tool_error"})
     results = state.get("tool_results") or []
     state["loop_count"] = state.get("loop_count", 0) + 1
 

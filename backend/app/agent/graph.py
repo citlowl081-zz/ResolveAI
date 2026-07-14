@@ -1,6 +1,6 @@
 """LangGraph state machine construction for the ResolveAI Agent.
 
-Compiles an 11-node graph with conditional edges for the three flows:
+Compiles a 9-node graph with conditional edges for the three flows:
 - Flow A: Read-only query
 - Flow B: Write proposed (pending_action created)
 - Flow C: Write confirmed (confirm_action_id provided)
@@ -35,7 +35,6 @@ def build_agent_graph():  # type: ignore[no-untyped-def]
     from app.agent.nodes.execute_tool import execute_tool
     from app.agent.nodes.handle_tool_error import handle_tool_error
     from app.agent.nodes.load_session import load_session
-    from app.agent.nodes.persist_messages import persist_messages
     from app.agent.nodes.receive_message import receive_message
     from app.agent.nodes.select_tools import select_tools
 
@@ -49,8 +48,6 @@ def build_agent_graph():  # type: ignore[no-untyped-def]
     graph.add_node("execute_tool", execute_tool)
     graph.add_node("handle_tool_error", handle_tool_error)
     graph.add_node("compose_response", compose_response)
-    graph.add_node("persist_messages", persist_messages)
-
     # ── Entry point ───────────────────────────────────────────────
     graph.set_entry_point("receive_message")
 
@@ -90,7 +87,6 @@ def build_agent_graph():  # type: ignore[no-untyped-def]
             "compose_response": "compose_response",
         },
     )
-    graph.add_edge("compose_response", "persist_messages")
-    graph.add_edge("persist_messages", END)
+    graph.add_edge("compose_response", END)
 
     return graph.compile()

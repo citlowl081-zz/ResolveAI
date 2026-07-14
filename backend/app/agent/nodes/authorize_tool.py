@@ -6,6 +6,7 @@ from app.models.enums import UserRole
 
 async def authorize_tool(state: AgentState) -> AgentState:
     state["current_node"] = "authorize_tool"
+    state.setdefault("node_timings", []).append({"node": "authorize_tool"})
     planned = state.get("planned_tools") or []
     user_role_str = state.get("user_role", "CUSTOMER")
 

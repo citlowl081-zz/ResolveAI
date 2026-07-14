@@ -434,7 +434,6 @@ class AgentOrchestrator:
             "receive_message", "load_session", "build_context",
             "classify_intent", "select_tools", "authorize_tool",
             "execute_tool", "handle_tool_error", "compose_response",
-            "persist_messages",
         ]
         seq = state.get("trace_sequence", 0)
         for node_name in all_nodes:
@@ -488,6 +487,28 @@ class AgentOrchestrator:
         turn_id = uuid.UUID(state["turn_id"])
         user_id = uuid.UUID(state["user_id"])
         idempotency_key = state["idempotency_key"]
+        trace_uuid = uuid.UUID(state["trace_id"])
+
+        # ── Write agent traces from node_timings (short TX before TX-B) ─
+        node_timings: list[dict] = state.get("node_timings", [])
+        if node_timings:
+            async with self.session_factory() as trace_session:
+                trace_repo = AgentTraceRepository(trace_session)
+                for i, timing in enumerate(node_timings):
+                    trace = AgentTrace(
+                        session_id=session_id,
+                        turn_id=turn_id,
+                        trace_id=trace_uuid,
+                        node_name=timing.get("node", "unknown"),
+                        sequence=i,
+                        duration_ms=timing.get("duration_ms", 0),
+                        is_success=True,
+                        routing_decision=timing.get("routing_decision"),
+                        llm_call=timing.get("llm_call"),
+                        tool_calls_summary=timing.get("tool_calls_summary"),
+                    )
+                    await trace_repo.save(trace)
+                await trace_session.commit()
 
         async with self.session_factory() as session:
             msg_repo = AgentMessageRepository(session)

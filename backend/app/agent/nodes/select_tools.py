@@ -6,6 +6,7 @@ from app.agent.state import AgentState
 
 async def select_tools(state: AgentState) -> AgentState:
     state["current_node"] = "select_tools"
+    state.setdefault("node_timings", []).append({"node": "select_tools"})
     context = state.get("context") or {}
     has_confirm = bool(state.get("confirm_action_id"))
 

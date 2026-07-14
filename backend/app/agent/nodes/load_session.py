@@ -5,6 +5,7 @@ from app.agent.state import AgentState
 
 async def load_session(state: AgentState) -> AgentState:
     state["current_node"] = "load_session"
+    state.setdefault("node_timings", []).append({"node": "load_session"})
     # Session was loaded and validated in preflight TX-A.
     # state["session"] and state["session_status"] are already populated.
     return state

@@ -15,6 +15,7 @@ INJECTION_PATTERNS = [
 
 async def receive_message(state: AgentState) -> AgentState:
     state["current_node"] = "receive_message"
+    state.setdefault("node_timings", []).append({"node": "receive_message"})
 
     message = state.get("user_message", "")
     detected = False

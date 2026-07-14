@@ -19,7 +19,6 @@ from httpx import AsyncClient
 from sqlalchemy import text
 
 import app.api.v1.agent as agent_module
-from app.config import settings as app_settings
 from app.agent.graph import build_agent_graph
 from app.agent.orchestrator import AgentOrchestrator
 from app.agent.pending_action_builder import (
@@ -27,6 +26,7 @@ from app.agent.pending_action_builder import (
     build_proposed_action_response,
     validate_pending_action,
 )
+from app.config import settings as app_settings
 from app.database.session import _get_session_factory
 from app.llm.mock_provider import MockProvider
 from app.llm.provider import ChatMessage, ChatRequest, ChatResponse
