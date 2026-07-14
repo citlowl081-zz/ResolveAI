@@ -19,7 +19,7 @@ Implement the complete business logic layer in two sub-phases.
 | Phase | Name | Status | Tables | Enums Added | Document |
 |-------|------|--------|--------|-------------|----------|
 | 02A | Core Commerce Backend | ✅ Complete | 8 | 5 | [phase-02A-core-commerce.md](phase-02A-core-commerce.md) |
-| 02B | After-sales Business Backend | ⬜ Planning (v5) | 3 (+2 ALTER) | 5 (+1 ALTER) + 2 sequences | [phase-02B-after-sales.md](phase-02B-after-sales.md) |
+| 02B | After-sales Business Backend | ✅ Complete | 3 (+2 ALTER) | 5 (+1 ALTER) + 2 sequences | [phase-02B-after-sales.md](phase-02B-after-sales.md) |
 
 ## Phase 02A Summary
 
@@ -54,7 +54,7 @@ Implement the complete business logic layer in two sub-phases.
 | logistics_records, audit_logs, system_configs | ✅ | | |
 | idempotency_records | ✅ | ✅ (reused) | |
 | after_sales_tickets, refund_records, reshipment_orders | | ✅ | |
-| order_status: REFUNDING, REFUNDED | | ✅ | |
+| order_status: REFUNDED | | ✅ | |
 | order_items: refunded_quantity, reshipped_quantity | | ✅ | |
 | approval_tasks | | | Phase 06 |
 | agent_sessions, agent_messages, agent_tool_logs, agent_traces | | | Phase 03 |
@@ -65,5 +65,5 @@ Implement the complete business logic layer in two sub-phases.
 
 - **Phase 02A Started:** 2026-07-13
 - **Phase 02A Completed:** 2026-07-13
-- **Phase 02B Started:** TBD
-- **Phase 02B Completed:** TBD
+- **Phase 02B Started:** 2026-07-14
+- **Phase 02B Completed:** 2026-07-14

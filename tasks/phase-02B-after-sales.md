@@ -929,41 +929,41 @@ backend/tests/conftest.py                          [ADD: after-sales fixtures]
 
 ## Acceptance Criteria
 
-- [ ] `alembic upgrade head` creates 3 tables + 5 enums + 2 sequences + extends order_status + alters order_items
-- [ ] Partial unique index on after_sales_tickets enforces active ticket dedup
-- [ ] UNIQUE(ticket_id) on refund_records and reshipment_orders
-- [ ] `alembic downgrade -1` with all 6 assertions passing → clean rollback
-- [ ] `alembic downgrade -1` blocked with clear error when any assertion fails
-- [ ] Ruff 0, Mypy 0
-- [ ] All 42 tests pass on fresh database (self-contained, no seed dependency)
-- [ ] Ticket creation: auto-validates → APPROVED/REJECTED/NEEDS_REVIEW
-- [ ] Eligibility: all 7 reject codes trigger correctly
-- [ ] Cumulative refund cap: SUM(existing) + current ≤ paid_amount
-- [ ] Shipping refund cap: SUM(existing) + current ≤ shipping_fee; only refunded once
-- [ ] Partial refund: order status unchanged; refunded_quantity tracked correctly
-- [ ] Full refund (cumulative or single): order → REFUNDED
-- [ ] Stock restored on PAID/SHIPPED refund; NOT restored on DELIVERED quality refund
-- [ ] Reshipment: stock deducted atomically; insufficient → ticket NEEDS_REVIEW (committed)
-- [ ] Reshipment lifecycle: ship (set tracking), deliver (set delivered_at), cancel (restore stock, CREATED only)
-- [ ] Lock ordering enforced: ticket → order → order_items → products
-- [ ] Post-lock re-validation: ticket status, version, quantities, cumulative amounts, stock
-- [ ] Cross-key duplicate: UNIQUE(ticket_id) + cross-table mutual exclusion
-- [ ] Idempotency: replay returns cached, different body → 409
-- [ ] RBAC: cross-user, cross-role all blocked
-- [ ] Audit: all mutating operations logged, no PII
-- [ ] Transaction orchestration in Service layer; Router never opens new DB tx for ticket changes
-- [ ] No idempotency_key columns on business tables
-- [ ] No refund_status enum; no status column on refund_records
-- [ ] No PROCESSING in ticket_status
-- [ ] requested_items, refund_items, missing_items validated server-side
-- [ ] request_fingerprint computed server-side
-- [ ] ticket_number and reshipment_number use PostgreSQL sequences
-- [ ] agent_notes renamed to operator_notes
+- [x] `alembic upgrade head` creates 3 tables + 5 enums + 2 sequences + extends order_status + alters order_items
+- [x] Partial unique index on after_sales_tickets enforces active ticket dedup
+- [x] UNIQUE(ticket_id) on refund_records and reshipment_orders
+- [x] `alembic downgrade -1` with all 6 assertions passing → clean rollback
+- [x] `alembic downgrade -1` blocked with clear error when any assertion fails
+- [x] Ruff 0, Mypy 0
+- [x] All 49 tests pass on fresh database (self-contained, no seed dependency)
+- [x] Ticket creation: auto-validates → APPROVED/REJECTED/NEEDS_REVIEW
+- [x] Eligibility: all 7 reject codes trigger correctly
+- [x] Cumulative refund cap: SUM(existing) + current ≤ paid_amount
+- [x] Shipping refund cap: SUM(existing) + current ≤ shipping_fee; only refunded once
+- [x] Partial refund: order status unchanged; refunded_quantity tracked correctly
+- [x] Full refund (cumulative or single): order → REFUNDED
+- [x] Stock restored on PAID/SHIPPED refund; NOT restored on DELIVERED quality refund
+- [x] Reshipment: stock deducted atomically; insufficient → ticket NEEDS_REVIEW (committed)
+- [x] Reshipment lifecycle: ship (set tracking), deliver (set delivered_at), cancel (restore stock, CREATED only)
+- [x] Lock ordering enforced: ticket → order → order_items → products
+- [x] Post-lock re-validation: ticket status, version, quantities, cumulative amounts, stock
+- [x] Cross-key duplicate: UNIQUE(ticket_id) + cross-table mutual exclusion
+- [x] Idempotency: replay returns cached, different body → 409
+- [x] RBAC: cross-user, cross-role all blocked
+- [x] Audit: all mutating operations logged, no PII
+- [x] Transaction orchestration in Service layer; Router never opens new DB tx for ticket changes
+- [x] No idempotency_key columns on business tables
+- [x] No refund_status enum; no status column on refund_records
+- [x] No PROCESSING in ticket_status
+- [x] requested_items, refund_items, missing_items validated server-side
+- [x] request_fingerprint computed server-side
+- [x] ticket_number and reshipment_number use PostgreSQL sequences
+- [x] agent_notes renamed to operator_notes
 
 ---
 
 ## Completion Record
 
-- **Started:** TBD
-- **Completed:** TBD
-- **Actual Effort:** TBD
+- **Started:** 2026-07-14
+- **Completed:** 2026-07-14
+- **Actual Effort:** 1 day (planning revisions v1-v5 + implementation + 49 tests + CI verification)

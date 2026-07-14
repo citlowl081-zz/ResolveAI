@@ -8,7 +8,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Planned
-- Phase 02: Business backend (SQLAlchemy models, repositories, services, auth, API)
 - Phase 03: Agent tools (tool definitions, execution, logging)
 - Phase 04: RAG knowledge base (policy ingestion, pgvector retrieval)
 - Phase 05: Memory system (short-term, long-term, business state)
@@ -16,6 +15,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Phase 07: Frontend (customer web + admin web)
 - Phase 08: Evaluation framework
 - Phase 09: Docker deployment
+
+## [0.2.0] — 2026-07-14
+
+### Added (Phase 02A — Core Commerce Backend)
+- 8 SQLAlchemy models: User, Product, Order, OrderItem, LogisticsRecord, AuditLog, SystemConfig, IdempotencyRecord.
+- 5 PostgreSQL enums: user_role, risk_level, product_category, order_status, logistics_status.
+- Alembic migration bc03591cd96c (8 tables + 5 enums).
+- 18 API endpoints: 4 auth, 4 products, 7 orders, 2 logistics, 1 admin.
+- JWT authentication with access (30min) / refresh (7d) token type enforcement.
+- Role-based access control: CUSTOMER, OPERATOR, ADMIN with server-side enforcement.
+- Order lifecycle: create → pay → ship → deliver → cancel.
+- In-transaction idempotency: INSERT ON CONFLICT DO NOTHING RETURNING pattern.
+- Optimistic locking via version column on all mutating operations.
+- SELECT FOR UPDATE with sorted product IDs for deadlock prevention.
+- NUMERIC(12,2) → Decimal for all monetary values.
+- Audit logging with field-level PII sanitization.
+- 33 self-contained integration tests (no seed dependency).
+- GitHub Actions CI all green.
+
+### Added (Phase 02B — After-sales Business Backend)
+- 3 new SQLAlchemy models: AfterSalesTicket, RefundRecord, ReshipmentOrder.
+- 5 new enums: intent_type, ticket_status, resolution_type, refund_type, reshipment_status.
+- order_status extended with REFUNDED.
+- order_items extended with refunded_quantity, reshipped_quantity.
+- 2 PostgreSQL sequences: ticket_number_seq, reshipment_number_seq.
+- Alembic migration 003 (3 tables + 5 enums + 2 sequences + 6-assertion downgrade protection).
+- 13 API endpoints: 4 customer + 9 operator/admin for after-sales.
+- Eligibility rules engine: 7 reject codes, NEEDS_REVIEW triggers.
+- Deterministic refund calculator: Decimal precision, cumulative cap, shipping fee cap.
+- Lock ordering: ticket → order → order_items → products with post-lock re-validation.
+- Cross-key duplicate guard: UNIQUE(ticket_id) constraints.
+- Active ticket dedup: partial unique index with server-computed request_fingerprint.
+- Reshipment lifecycle: create → ship → deliver → cancel with stock management.
+- 16 new integration tests (49 total, all passing).
+- GitHub Actions remote CI all green.
 
 ## [0.1.0] — 2026-07-13
 

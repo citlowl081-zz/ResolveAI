@@ -1,15 +1,15 @@
 # ResolveAI — Current Handoff
 
-**Date:** 2026-07-14  
-**Generated:** Before context compression
+**Date:** 2026-07-14
+**Generated:** After Phase 02B completion and remote CI verification
 
 ---
 
 ## Current Phase
 
-**Phase 02B — After-sales Business Backend** (PLANNING, awaiting approval)
+**Phase 02 — Business Backend: COMPLETE**
 
-Phase 02A is complete. Phase 02B plan has been designed and is awaiting user review. No Phase 02B code has been written.
+Both sub-phases (02A Core Commerce + 02B After-sales) are complete, tested, and CI-verified. Next phase is Phase 03 — Agent Tools (planning not yet started).
 
 ---
 
@@ -33,7 +33,7 @@ Phase 02A is complete. Phase 02B plan has been designed and is awaiting user rev
 
 ### Phase 02A — Core Commerce Backend
 - 8 tables: users, products, orders, order_items, logistics_records, audit_logs, system_configs, idempotency_records
-- 5 PostgreSQL enums: user_role, risk_level, product_category, order_status (PENDING_PAYMENT/PAID/SHIPPED/DELIVERED/CANCELLED), logistics_status
+- 5 PostgreSQL enums: user_role, risk_level, product_category, order_status, logistics_status
 - 18 API endpoints across 5 routers
 - JWT auth (access + refresh tokens with type enforcement)
 - RBAC: CUSTOMER/OPERATOR/ADMIN with server-side enforcement
@@ -44,34 +44,33 @@ Phase 02A is complete. Phase 02B plan has been designed and is awaiting user rev
 - SELECT FOR UPDATE with sorted product IDs for deadlock prevention
 - All monetary types: NUMERIC(12,2) → Python Decimal
 - Audit logging with field-level PII sanitization
-- Idempotent seed script (5 users, 10 products, 4 orders)
 - 33 self-contained integration tests (no seed dependency)
-- CI green on GitHub Actions (after 4 fix rounds)
 
----
-
-## Latest Commit
-
-```
-5bbdf6b [Phase 02A] Fix request transaction persistence and test isolation
-```
-
-Full commit chain (most recent first):
-```
-5bbdf6b Fix request transaction persistence and test isolation
-e5614b1 Fix CI runtime dependencies and clean-room validation
-598e155 Fix redundant casts in security type boundaries
-4e3fe52 Fix CI mypy errors in security boundaries
-ebabc63 Complete: 32 tests pass, Ruff 0, Mypy 0
-```
+### Phase 02B — After-sales Business Backend
+- 3 new tables: after_sales_tickets, refund_records, reshipment_orders
+- 5 new enums: intent_type, ticket_status, resolution_type, refund_type, reshipment_status
+- order_status extended: +REFUNDED
+- order_items extended: +refunded_quantity, +reshipped_quantity
+- 2 PostgreSQL sequences: ticket_number_seq, reshipment_number_seq
+- 13 API endpoints (4 customer + 9 operator/admin)
+- Ticket lifecycle: create → auto-validate (APPROVED/REJECTED/NEEDS_REVIEW) → execute (COMPLETED/NEEDS_REVIEW)
+- 7 reject codes: NOT_OWNER, INVALID_STATUS, DUPLICATE_TICKET, NOT_RETURNABLE, OVER_TIME_LIMIT, QUANTITY_EXCEEDED, ALREADY_REFUNDED
+- Refund calculator: deterministic Decimal, cumulative cap, shipping fee cap
+- Lock ordering: ticket → order → order_items → products with post-lock re-validation
+- Cross-key duplicate guard: UNIQUE(ticket_id) on refund_records + reshipment_orders
+- Active ticket dedup: partial unique index (order_id, intent, request_fingerprint)
+- 6-assertion downgrade protection
+- No PROCESSING transient states, no refund_status enum
+- 16 new integration tests (49 total), CI green
 
 ---
 
 ## Latest Remote CI Status
 
-**ALL GREEN** (last run on commit `5bbdf6b` after 4 CI fix rounds):
+**ALL GREEN** — GitHub Actions remote CI verified:
+
 - Backend — Lint & Typecheck: PASS
-- Backend — Tests: PASS (33/33)
+- Backend — Tests: PASS (49/49)
 - Frontend — Customer Web: PASS
 - Frontend — Admin Web: PASS
 
@@ -80,105 +79,78 @@ ebabc63 Complete: 32 tests pass, Ruff 0, Mypy 0
 ## Current Database Migrations
 
 ```
-bc03591cd96c (head) — create_core_commerce_tables
-a33b3199a4a2        — enable_pgvector_extension
+003 (head) — create_after_sales_tables
+bc03591cd96c — create_core_commerce_tables
+a33b3199a4a2 — enable_pgvector_extension
 ```
 
-8 tables: users, products, orders, order_items, logistics_records, audit_logs, system_configs, idempotency_records
+12 tables: users, products, orders, order_items, logistics_records, audit_logs, system_configs, idempotency_records, after_sales_tickets, refund_records, reshipment_orders, alembic_version
 
-5 enums: user_role, risk_level, product_category, order_status, logistics_status
+10 enums: user_role, risk_level, product_category, order_status (+REFUNDED), logistics_status, intent_type, ticket_status, resolution_type, refund_type, reshipment_status
 
 ---
 
-## Implemented API Endpoints (18)
+## Implemented API Endpoints (31)
 
-### Auth (4)
-- `POST /api/v1/auth/register` — public
-- `POST /api/v1/auth/login` — public
-- `POST /api/v1/auth/refresh` — refresh token
-- `GET /api/v1/auth/me` — access token
+### Phase 02A (18)
+- 4 Auth: register, login, refresh, me
+- 4 Products: list, detail, create (ADMIN), update (ADMIN)
+- 7 Orders: create, list, detail, pay, cancel, ship, deliver
+- 2 Logistics: list, add event
+- 1 Admin: config read
 
-### Products (4)
-- `GET /api/v1/products` — public, paginated, filterable
-- `GET /api/v1/products/{id}` — public
-- `POST /api/v1/products` — ADMIN
-- `PATCH /api/v1/products/{id}` — ADMIN, version check
-
-### Orders (7)
-- `POST /api/v1/orders` — CUSTOMER, Idempotency-Key
-- `GET /api/v1/orders` — CUSTOMER, own orders
-- `GET /api/v1/orders/{id}` — owner/ADMIN/OPERATOR
-- `POST /api/v1/orders/{id}/pay` — owner, Idempotency-Key, version check
-- `POST /api/v1/orders/{id}/cancel` — owner/ADMIN, Idempotency-Key (PENDING_PAYMENT only)
-- `POST /api/v1/orders/{id}/ship` — ADMIN/OPERATOR, Idempotency-Key
-- `POST /api/v1/orders/{id}/deliver` — ADMIN/OPERATOR, Idempotency-Key
-
-### Logistics (2)
-- `GET /api/v1/orders/{id}/logistics` — owner/ADMIN/OPERATOR
-- `POST /api/v1/orders/{id}/logistics/events` — ADMIN/OPERATOR, Idempotency-Key
-
-### Admin (1)
-- `GET /api/v1/admin/config` — ADMIN
-
-### Health (1)
-- `GET /health` — public
+### Phase 02B (13)
+- 4 Customer after-sales: create ticket, list tickets, ticket detail, cancel ticket
+- 6 Admin after-sales: list all, ticket detail, approve, reject, refund, reship
+- 3 Admin reshipments: ship, deliver, cancel
 
 ---
 
 ## Key Architecture Decisions
 
 1. **Transaction ownership:** `get_db` commits on success, rolls back on exception. Services call `session.flush()` internally. No commit in Repository or Service.
-2. **Idempotency:** Single `idempotency_records` table with INSERT ON CONFLICT DO NOTHING RETURNING pattern. `UNIQUE(user_id, operation, idempotency_key)`. No FAILED status — business failure rolls back entire tx.
-3. **Optimistic locking:** `version` column on users, products, orders. All mutating endpoints require `expected_version` in request body. `WHERE version = :expected RETURNING version` → 0 rows = 409.
-4. **Monetary precision:** PostgreSQL `NUMERIC(12,2)` → Python `Decimal`. No `float`. Client cannot submit prices/amounts.
-5. **Stock management:** Pre-check at order create (non-locking). Deduction at pay (SELECT FOR UPDATE, sorted ascending by product_id). No reservation.
-6. **PAID cancel deferred:** PAID/SHIPPED/DELIVERED orders cannot be cancelled via Phase 02A cancel endpoint → returns 409, directs to after-sales flow (Phase 02B).
-7. **Test isolation:** All tests self-contained (create own data via API). No dependency on seed data. Fresh database per test suite. Unique emails per test.
-8. **CI deps:** `email-validator`, `types-passlib`, `types-python-jose` declared in pyproject.toml dev deps. `bcrypt<5` pinned for passlib compatibility.
+2. **Idempotency:** Single `idempotency_records` table with INSERT ON CONFLICT DO NOTHING RETURNING pattern. No idempotency_key on business tables.
+3. **Optimistic locking:** `version` column on users, products, orders, tickets, refunds, reshipments.
+4. **Monetary precision:** PostgreSQL `NUMERIC(12,2)` → Python `Decimal`. No `float`.
+5. **Stock management:** Pre-check at order create (non-locking). Deduction at pay (SELECT FOR UPDATE).
+6. **Partial refund = no order status change.** Only full refund → REFUNDED.
+7. **No transient states:** No PROCESSING in tickets, no REFUNDING in orders, no refund_status enum.
+8. **Lock ordering:** ticket → order → order_items (by id ASC) → products (by product_id ASC). Post-lock re-validation.
+9. **Active ticket dedup:** Partial unique index with server-computed request_fingerprint.
+10. **Transaction orchestration in Service layer** — Router never opens new DB tx.
 
 ---
 
 ## Known Limitations
 
-1. **No PAID order cancellation** — returns 409 "use after-sales process" → Phase 02B
-2. **No server-side Refresh Token revocation** — short TTL (30 min) partially mitigates
-3. **No payment gateway** — payment is simulated status transition
-4. **No shopping cart** — direct order creation
-5. **No inventory reservation** — stock checked at create, deducted at pay
-6. **bcrypt 5.x incompatible with passlib** — pinned `bcrypt<5`
-7. **npm cache has root-owned files** — workaround with `/tmp/npm-cache-fresh`
-8. **order_items has no refund tracking fields** — Phase 02B adds `refunded_quantity`/`reshipped_quantity`
+1. No payment gateway — payment/refund are simulated status transitions
+2. No EXCHANGE implementation beyond creating a NEEDS_REVIEW ticket
+3. No config write API — after-sales configs set via seed script or direct DB
+4. No approval_tasks table — NEEDS_REVIEW is a ticket status
+5. No Agent, no LangGraph, no RAG, no Memory (Phase 03-05)
+6. No email notifications
+7. No Redis, no Kafka, no microservices (by design)
 
 ---
 
-## Uncommitted Changes
-
-Three task files modified (PLANNING ONLY, no code changes):
+## Latest Commits
 
 ```
-tasks/active-phase.md              — Updated to Phase 02B
-tasks/phase-02-business-backend.md — Updated index with Phase 02A summary
-tasks/phase-02B-after-sales.md     — Full Phase 02B design document
+691e8c2 [Phase 02B] Completion report — 49 tests pass, ruff/mypy green, migration cycle verified
+64a574b [Phase 02B] Repositories, services, schemas, API routes, and 16 tests
+436e6ed [Phase 02B] Migration 003, models, enums, and rules layer
+f6d9c17 [Phase 02B] Finalize after-sales backend implementation plan
+5bbdf6b [Phase 02A] Fix request transaction persistence and test isolation
 ```
 
-**No code, migration, or test files were modified.**
+All commits pushed to GitHub.
 
 ---
 
 ## Next Task
 
-**Phase 02B — After-sales Business Backend** implementation (pending user approval of plan):
-
-1. Create migration 003 (3 tables + 6 enums + order_status extension + order_items ALTER)
-2. Implement 3 SQLAlchemy models + 6 Python enums
-3. Implement eligibility rules (7 reject codes, NEEDS_REVIEW triggers)
-4. Implement refund calculator (Decimal, cap enforcement)
-5. Implement Ticket/Refund/Reshipment services (transactional)
-6. Extend order state transitions (REFUNDING/REFUNDED)
-7. Extend cancel endpoint (PAID → auto-refund + stock restore)
-8. Implement after-sales API endpoints (customer + admin)
-9. Write self-contained integration tests
-10. Ruff, mypy, pytest, CI verification
+**Phase 03 — Agent Tools** (planning not yet started).
+See `tasks/active-phase.md` for current phase pointer.
 
 ---
 
@@ -192,15 +164,12 @@ docker compose up -d db
 cd backend && source .venv/bin/activate
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
-# Seed data
-python -m app.database.seed
-
 # Full check
 ruff check app/ tests/
 mypy --no-incremental app/ tests/
 pytest -v
 
-# Fresh test database (recreate + run)
+# Fresh test database
 docker exec resolveai-db psql -U resolveai -d resolveai -c "DROP DATABASE IF EXISTS resolveai_test_ci;"
 docker exec resolveai-db psql -U resolveai -d resolveai -c "CREATE DATABASE resolveai_test_ci;"
 DATABASE_URL="postgresql+asyncpg://resolveai:resolveai-dev@localhost:5432/resolveai_test_ci" alembic upgrade head
@@ -213,11 +182,3 @@ cd frontend/admin-web && npm run dev      # :3001
 # Docker full stack
 docker compose up -d
 ```
-
-### Test Accounts (from seed)
-
-| Email | Password | Role |
-|-------|----------|------|
-| admin@test.com | password123 | ADMIN |
-| operator@test.com | password123 | OPERATOR |
-| customer@test.com | password123 | CUSTOMER |
