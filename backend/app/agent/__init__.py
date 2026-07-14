@@ -1,1 +1,1 @@
-# Agent module - LangGraph state machine
+"""Agent module — LangGraph state machine, orchestrator, nodes, routing."""
