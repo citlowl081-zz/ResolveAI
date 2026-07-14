@@ -60,10 +60,33 @@ class Settings(BaseSettings):
     llm_max_retries: int = 1
 
     # ---- Embedding (Phase 04+) ----
-    embedding_provider: str = "openai"
+    embedding_provider: str = "mock"
+    """``"mock"`` (deterministic test vectors) or ``"openai"`` (OpenAI-compatible /v1/embeddings)."""
+
     embedding_model: str = "text-embedding-3-small"
+    """Model name sent in the /v1/embeddings request body."""
+
     embedding_api_key: str = ""
+    """API key sent as ``Authorization: Bearer <key>``.  Empty for mock."""
+
+    embedding_base_url: str = "https://api.openai.com/v1"
+    """Base URL for the OpenAI-compatible embeddings endpoint (``/embeddings`` appended)."""
+
     embedding_dimension: int = 1536
+    """**MUST be 1536.**  The database column is ``vector(1536)`` — any other value causes
+    a start-up failure.  This field acts as a configuration validation check, not a
+    mechanism to change the database dimension."""
+
+    embedding_timeout_seconds: int = 60
+    embedding_max_retries: int = 1
+
+    # ---- RAG (Phase 04+) ----
+    rag_top_k: int = 5
+    """Default number of policy results returned by vector search."""
+
+    rag_min_similarity: float | None = None
+    """Minimum cosine similarity threshold.  ``None`` = return all results.
+    Tune from eval data in Phase 04B."""
 
     # ---- JWT (Phase 02+) ----
     jwt_secret_key: str = "dev-secret-change-in-production"

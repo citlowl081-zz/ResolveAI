@@ -2,17 +2,17 @@
 
 **Date:** 2026-07-14
 **Generated:** After Phase 03 completion and CI verification
-**Updated:** Phase 04 planning revised (revision 4) — approved
+**Updated:** Phase 04A Batch 1 complete — enums, validation, settings, models, migration 005
 
 ---
 
 ## Current Phase
 
-**Phase 04 — RAG Knowledge Base: PLANNING** (implementation not started)
+**Phase 04A — Policy Knowledge Base: Batch 1 COMPLETE**
 
 Phase 03 — Agent Tools: COMPLETE
 
-Phase 03 implementation, testing, and CI verification are complete. Phase 04 planning is complete — plan has been revised and approved (revision 4). Implementation has NOT started.
+Phase 04 implementation plan approved (revision 4). Phase 04A Batch 1 is complete: Python enums (PolicyCategory, PolicyStatus), policy_key validation, embedding settings, SQLAlchemy models (PolicyDocument, PolicyChunk), migration 005. 204 tests pass (155 old + 49 new). Phase 04A remaining batches, 04B, and 04C have NOT started.
 
 ---
 

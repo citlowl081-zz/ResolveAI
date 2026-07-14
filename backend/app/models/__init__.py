@@ -10,6 +10,8 @@ from app.models.idempotency_record import IdempotencyRecord
 from app.models.logistics_record import LogisticsRecord
 from app.models.order import Order
 from app.models.order_item import OrderItem
+from app.models.policy_chunk import PolicyChunk
+from app.models.policy_document import PolicyDocument
 from app.models.product import Product
 from app.models.refund_record import RefundRecord
 from app.models.reshipment_order import ReshipmentOrder
@@ -26,6 +28,8 @@ __all__ = [
     "SystemConfig",
     "IdempotencyRecord",
     "AfterSalesTicket",
+    "PolicyChunk",
+    "PolicyDocument",
     "RefundRecord",
     "ReshipmentOrder",
     "AgentSession",

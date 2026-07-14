@@ -90,3 +90,56 @@ class MessageRole(enum.StrEnum):
     ASSISTANT = "ASSISTANT"
     TOOL = "TOOL"
     SYSTEM = "SYSTEM"
+
+
+class PolicyCategory(enum.StrEnum):
+    """Policy document categories matching the policy_key prefix system.
+
+    Each category maps to a 3-letter prefix used in policy_key identifiers
+    (e.g. ``POL-REF-001`` has prefix ``REF`` and category ``REFUND``).
+    """
+
+    RETURN = "RETURN"
+    REFUND = "REFUND"
+    EXCHANGE = "EXCHANGE"
+    RESHIPMENT = "RESHIPMENT"
+    LOGISTICS = "LOGISTICS"
+    RISK = "RISK"
+    SOP = "SOP"
+    GENERAL = "GENERAL"
+
+    @classmethod
+    def from_prefix(cls, prefix: str) -> "PolicyCategory":
+        """Return the PolicyCategory for a 3-letter policy_key prefix.
+
+        Raises ``ValueError`` if *prefix* is not recognised.
+        """
+        _map: dict[str, PolicyCategory] = {
+            "RET": cls.RETURN,
+            "REF": cls.REFUND,
+            "EXC": cls.EXCHANGE,
+            "RES": cls.RESHIPMENT,
+            "LOG": cls.LOGISTICS,
+            "RISK": cls.RISK,
+            "SOP": cls.SOP,
+            "GEN": cls.GENERAL,
+        }
+        if prefix not in _map:
+            raise ValueError(
+                f"Unknown policy_key prefix '{prefix}'. "
+                f"Allowed: {sorted(_map.keys())}"
+            )
+        return _map[prefix]
+
+
+class PolicyStatus(enum.StrEnum):
+    """Lifecycle status for policy document versions.
+
+    Only ``ACTIVE`` policies are returned by search and retrieval.
+    ``SUPERSEDED`` and ``ARCHIVED`` are terminal.
+    """
+
+    DRAFT = "DRAFT"
+    ACTIVE = "ACTIVE"
+    SUPERSEDED = "SUPERSEDED"
+    ARCHIVED = "ARCHIVED"

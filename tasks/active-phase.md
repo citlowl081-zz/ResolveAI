@@ -1,6 +1,6 @@
 # Active Phase
 
-**Current Phase:** Phase 04 — RAG Knowledge Base (PLANNING)
+**Current Phase:** Phase 04A — Policy Knowledge Base (Batch 1 COMPLETE)
 
 **Previous Phase:** Phase 03 — Agent Tools (COMPLETE)
 
@@ -39,17 +39,31 @@ ResolveAI/
 - [Phase 02 — Business Backend (Index)](phase-02-business-backend.md) ✅
 - [Phase 03 — Agent Tools](phase-03-agent-tools.md) ✅
 
-## Phase 04 Status: PLANNING
+## Phase 04 Status: IN PROGRESS
 
-Phase 04 implementation plan has been written, revised, and approved (revision 4). See `tasks/phase-04-rag.md` for the complete plan.
+Phase 04 implementation plan approved (revision 4). See `tasks/phase-04-rag.md` for the complete plan.
 
 Phase 04 is split into:
 - **04A** — Policy Knowledge Base (data model, embeddings, chunking, ingestion, retrieval, admin API)
-- **04B** — Agent RAG Integration (tool, citations, evaluation)
-- **04C** — PDF/DOCX Upload (optional, deferred)
+- **04B** — Agent RAG Integration (tool, citations, evaluation) — **not started**
+- **04C** — PDF/DOCX Upload (optional, deferred) — **not started**
 
-**Implementation has NOT started.** Phase 04B and 04C have NOT started. Do NOT begin coding until explicitly instructed.
+### Phase 04A Batch 1 — COMPLETE
+- Python enums: PolicyCategory, PolicyStatus with `from_prefix()` lookup
+- policy_key validation: `validate_policy_key()`, `validate_policy_key_and_category()` in `app/rag/validation.py`
+- Settings: embedding config (OpenAI-compatible `EMBEDDING_PROVIDER/MODEL/API_KEY/BASE_URL/DIMENSION/TIMEOUT_SECONDS/MAX_RETRIES` + `RAG_TOP_K` + `RAG_MIN_SIMILARITY`)
+- SQLAlchemy models: PolicyDocument (policy_key + version keyed), PolicyChunk (vector(1536))
+- Migration 005: policy_documents + policy_chunks tables with all constraints and indexes
+- Tests: 49 new (20 unit + 13 integration model constraints). Total: 204 passed. Zero regressions.
+
+### Phase 04A Remaining
+- Batch 2: Embedding providers (ABC, Mock, OpenAI-compatible), chunking, content_hash
+- Batch 3: Repositories, retrieval (exact cosine search)
+- Batch 4: PolicyService, ingestion, admin API
+- Batch 5: Policy data files (14 markdown policies)
+
+**Phase 04A is NOT complete.** Phase 04B and 04C have NOT started.
 
 ## Next Step
 
-Phase 04A Batch 1 implementation: enums (policy_key prefix validation), settings revision, data models (policy_key + version keyed), migration 005 (vector(1536) fixed).
+Phase 04A Batch 2: EmbeddingProvider ABC, MockEmbeddingProvider (BLAKE2b bigram), OpenAICompatibleEmbeddingProvider (httpx), Chinese-friendly chunking, content_hash function.
