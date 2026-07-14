@@ -1,6 +1,16 @@
-"""compose_response node — generate natural language response from tool results."""
+"""compose_response node — LLM generation with PendingActionBuilder, template fallback."""
 
+import json
+import time
+from typing import Any, cast
+
+from app.agent.pending_action_builder import (
+    build_pending_action,
+    build_proposed_action_response,
+)
+from app.agent.provider import get_provider
 from app.agent.state import AgentState
+from app.llm.provider import ChatMessage, ChatRequest
 
 
 async def compose_response(state: AgentState) -> AgentState:
@@ -15,34 +25,156 @@ async def compose_response(state: AgentState) -> AgentState:
     # If terminal error, return safe error message
     if state.get("terminal_error"):
         code: str = state.get("terminal_error_code") or "TOOL_EXECUTION_FAILED"
-        messages: dict[str, str] = {
-            "ACTION_NOT_FOUND": "未找到待确认的操作，请重新描述您的需求。",
-            "ACTION_EXPIRED": "该操作已过期，请重新确认。",
-            "ACTION_ALREADY_CONSUMED": "该操作已执行，无需重复确认。",
-            "BUSINESS_CONFLICT": "当前状态下无法执行此操作。",
-            "IDEMPOTENCY_CONFLICT": "请求冲突，请重试。",
-            "RESOURCE_NOT_FOUND": "未找到相关资源，请检查信息是否正确。",
-        }
-        state["response_text"] = messages.get(code, "抱歉，处理请求时遇到问题，请稍后重试。")
+        state["response_text"] = _terminal_error_message(code)
         state["proposed_actions"] = []
         return state
 
-    # Build response from tool results
+    provider = get_provider()
+
+    if provider is not None:
+        t0 = time.monotonic()
+        fallback_used = False
+        try:
+            response = await _llm_compose(state, provider)
+            elapsed_ms = int((time.monotonic() - t0) * 1000)
+            state.setdefault("node_timings", []).append({
+                "node": "compose_response",
+                "llm_call": {
+                    "model": response.model,
+                    "prompt_tokens": response.usage.get("prompt_tokens", 0),
+                    "completion_tokens": response.usage.get("completion_tokens", 0),
+                    "latency_ms": elapsed_ms,
+                },
+            })
+            if response.content:
+                try:
+                    parsed = json.loads(response.content)
+                    state["response_text"] = parsed.get("response", "")
+                    # PendingActionBuilder for write proposals
+                    if parsed.get("propose_action"):
+                        pa_data = parsed["propose_action"]
+                        intent = pa_data.get("intent", state.get("intent", "OTHER"))
+                        items_spec = pa_data.get("items", [])
+                        description = pa_data.get("description", "")
+                        order_ctx = _get_order_context(state)
+                        if order_ctx and items_spec:
+                            pending = build_pending_action(
+                                intent=intent,
+                                order_context=order_ctx,
+                                items_spec=items_spec,
+                                description=description,
+                            )
+                            if pending:
+                                state["proposed_actions"] = [
+                                    build_proposed_action_response(pending)
+                                ]
+                                state.setdefault("_pending_action_for_snapshot", pending)
+                            else:
+                                state["proposed_actions"] = []
+                        else:
+                            state["proposed_actions"] = []
+                    else:
+                        state["proposed_actions"] = []
+                    return state
+                except (json.JSONDecodeError, KeyError):
+                    # Non-JSON response — use content as-is
+                    state["response_text"] = response.content or ""
+                    state["proposed_actions"] = []
+                    return state
+        except Exception:
+            fallback_used = True
+
+        if fallback_used:
+            state.setdefault("node_timings", []).append({
+                "node": "compose_response",
+                "fallback": True,
+                "reason": "LLM call failed, using template",
+            })
+
+    # ── Template fallback ──────────────────────────────────────────
+    _template_compose(state)
+    return state
+
+
+async def _llm_compose(state: AgentState, provider: Any) -> Any:
+    """Call LLM to generate response and propose actions."""
+    results = state.get("tool_results") or []
+    intent = state.get("intent", "OTHER")
+    confirm = state.get("confirm_action_id")
+
+    # Build context summary from tool results
+    context_items: list[str] = []
+    for r in results:
+        if r.get("is_success") and r.get("data"):
+            context_items.append(f"{r['tool_name']} result: {json.dumps(r['data'], ensure_ascii=False)}")
+
+    context_str = "\n".join(context_items) if context_items else "No tool results available."
+
+    system_prompt = (
+        "You are an e-commerce after-sales customer service agent. "
+        "Generate a helpful, natural Chinese response based on the tool results. "
+        "Respond with JSON: {\"response\": \"...\", \"propose_action\": null or {\"intent\": \"...\", \"items\": [{\"product_name\": \"...\", \"quantity\": N, \"reason_code\": \"...\"}], \"description\": \"...\"}}. "
+        "Only propose an action (propose_action) if the user clearly needs a refund/exchange/reshipment and has NOT yet confirmed one. "
+        "If confirm_action_id was already used, do NOT propose another action."
+    )
+
+    user_prompt = (
+        f"User message: {state['user_message']}\n"
+        f"Detected intent: {intent}\n"
+        f"Confirm action ID: {confirm or 'none'}\n"
+        f"Tool results:\n{context_str}\n\n"
+        "Generate a JSON response with a natural Chinese reply and optionally a proposed action."
+    )
+
+    request = ChatRequest(
+        messages=[
+            ChatMessage(role="system", content=system_prompt),
+            ChatMessage(role="user", content=user_prompt),
+        ],
+        max_tokens=1024,
+        temperature=0.3,
+    )
+    return await provider.chat_structured(request, {
+        "type": "object",
+        "properties": {
+            "response": {"type": "string"},
+            "propose_action": {
+                "type": "object",
+                "properties": {
+                    "intent": {"type": "string"},
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "product_name": {"type": "string"},
+                                "quantity": {"type": "integer"},
+                                "reason_code": {"type": "string"},
+                            },
+                        },
+                    },
+                    "description": {"type": "string"},
+                },
+            },
+        },
+        "required": ["response"],
+    })
+
+
+def _template_compose(state: AgentState) -> None:
+    """Template-based fallback response generation."""
     results = state.get("tool_results") or []
     success_results = [r for r in results if r.get("is_success")]
     failed_results = [r for r in results if not r.get("is_success")]
     response_parts: list[str] = []
 
-    # Generate summary from successful tool results
     intent = state.get("intent", "OTHER")
     confirm = state.get("confirm_action_id")
 
     if confirm and state.get("pending_action_valid"):
-        # Flow C: Write was confirmed and executed
         pa = state.get("pending_action") or {}
         tool_name = pa.get("tool_name", "")
         if tool_name == "create_after_sales_ticket":
-            # Find the create_ticket result
             for r in success_results:
                 raw = r.get("raw_data", {})
                 if raw.get("ticket_number"):
@@ -68,19 +200,14 @@ async def compose_response(state: AgentState) -> AgentState:
             else:
                 response_parts.append("已取消工单。")
     else:
-        # Flow A/B: Summarize read tool results
         order_info = None
         logistics_info = None
-        ticket_info = None
-
         for r in success_results:
             raw = r.get("raw_data", {})
             if r["tool_name"] == "get_order":
                 order_info = raw
             elif r["tool_name"] == "get_logistics":
                 logistics_info = raw
-            elif r["tool_name"] == "list_after_sales_tickets":
-                ticket_info = raw
 
         if order_info:
             status_map = {
@@ -97,26 +224,29 @@ async def compose_response(state: AgentState) -> AgentState:
         if logistics_info:
             carrier = logistics_info.get("carrier", "")
             tracking = logistics_info.get("tracking_number", "")
-            status = logistics_info.get("status", "")
             if carrier and tracking:
-                response_parts.append(f"物流信息：{carrier} {tracking}，状态：{status}。")
+                response_parts.append(f"物流信息：{carrier} {tracking}。")
 
-        if ticket_info:
-            items = ticket_info.get("items", [])
-            if items:
-                response_parts.append(f"您有 {len(items)} 个相关售后工单。")
-
-        # Flow B: Propose write action if appropriate
+        # Flow B: Propose write action if appropriate (template fallback)
         if intent in ("QUALITY_REFUND", "PRE_SHIP_REFUND", "MISSING_PARTS", "EXCHANGE") \
-                and not confirm and order_info:
-            # LLM would normally produce this. For Phase 03 deterministic mode:
-            proposed = {
-                "action_id": "",  # Will be filled by PendingActionBuilder
-                "tool_name": "create_after_sales_ticket",
-                "description": f"为您创建{intent}工单",
-                "status": "pending_confirmation",
-            }
-            state["proposed_actions"] = [proposed]
+                and not confirm and order_info is not None:
+            ctx_order: dict = cast(dict, order_info)
+            items_raw: Any = ctx_order.get("items", [])
+            if items_raw:
+                pa_template: dict | None = build_pending_action(
+                    intent=intent,
+                    order_context=ctx_order,
+                    items_spec=[{
+                        "product_name": items_raw[0].get("product_name", ""),
+                        "quantity": 1,
+                        "reason_code": "DAMAGED" if intent == "QUALITY_REFUND" else "OTHER",
+                    }],
+                    description=f"为您创建{intent}工单",
+                )
+                if pa_template:
+                    pa_template["description"] = f"为您创建{intent}工单"
+                    state["_pending_action_for_snapshot"] = pa_template
+                    state["proposed_actions"] = [build_proposed_action_response(pa_template)]
 
     if failed_results:
         response_parts.append("部分查询暂时不可用，请稍后重试。")
@@ -125,4 +255,33 @@ async def compose_response(state: AgentState) -> AgentState:
         response_parts.append("请问还有什么可以帮您的？")
 
     state["response_text"] = "\n".join(response_parts)
-    return state
+
+
+def _terminal_error_message(code: str) -> str:
+    messages: dict[str, str] = {
+        "ACTION_NOT_FOUND": "未找到待确认的操作，请重新描述您的需求。",
+        "ACTION_EXPIRED": "该操作已过期，请重新确认。",
+        "ACTION_ALREADY_CONSUMED": "该操作已执行，无需重复确认。",
+        "BUSINESS_CONFLICT": "当前状态下无法执行此操作。",
+        "IDEMPOTENCY_CONFLICT": "请求冲突，请重试。",
+        "RESOURCE_NOT_FOUND": "未找到相关资源，请检查信息是否正确。",
+    }
+    return messages.get(code, "抱歉，处理请求时遇到问题，请稍后重试。")
+
+
+def _get_order_context(state: AgentState) -> dict | None:
+    """Extract order data from tool results or context for PendingActionBuilder."""
+    results = state.get("tool_results") or []
+    for r in results:
+        if r.get("is_success") and r["tool_name"] == "get_order":
+            raw = r.get("raw_data")
+            if isinstance(raw, dict):
+                return raw
+    ctx = state.get("context") or {}
+    if isinstance(ctx, dict):
+        orders = ctx.get("orders", [])
+        if isinstance(orders, list) and orders:
+            first = orders[0]
+            if isinstance(first, dict):
+                return first
+    return None

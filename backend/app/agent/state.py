@@ -43,6 +43,7 @@ class AgentState(TypedDict):
     # ── Response ──
     response_text: str | None
     proposed_actions: list[dict] | None
+    _pending_action_for_snapshot: dict | None  # Set by compose_response, saved in TX-B
 
     # ── Control ──
     current_node: str

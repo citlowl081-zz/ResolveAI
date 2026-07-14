@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.agent.state import AgentState
 from app.config.settings import settings
 from app.exceptions import AppError, ConflictError, NotFoundError
+from app.llm.provider import ModelProvider
 from app.models.agent_message import AgentMessage
 from app.models.agent_session import AgentSession
 from app.models.agent_trace import AgentTrace
@@ -62,9 +63,11 @@ class AgentOrchestrator:
         self,
         session_factory: async_sessionmaker[AsyncSession],
         graph: Any,  # Compiled LangGraph graph
+        llm: ModelProvider | None = None,
     ) -> None:
         self.session_factory = session_factory
         self.graph = graph
+        self.llm = llm
 
     # ── Public entry point ──────────────────────────────────────────
 
@@ -140,9 +143,12 @@ class AgentOrchestrator:
             "terminal_error_code": None,
             "terminal_error_message": None,
             "node_timings": [],
+            "_pending_action_for_snapshot": None,
         }
 
         # ── Run LangGraph ───────────────────────────────────────────
+        from app.agent.provider import set_provider
+        set_provider(self.llm)
         try:
             result_state = await self.graph.ainvoke(initial_state)
 
@@ -529,11 +535,16 @@ class AgentOrchestrator:
                     cs["pending_action"] = pa
                     sess.context_snapshot = cs
 
-                # Store proposed_actions for next turn
-                cs = dict(sess.context_snapshot or {})
-                if state.get("proposed_actions"):
-                    # Only store if there's a pending_action to confirm
-                    pass  # pending_action already stored in context_snapshot above
+                # Store pending_action from compose_response in context_snapshot
+                pending_snapshot = state.get("_pending_action_for_snapshot")
+                if pending_snapshot:
+                    cs = dict(sess.context_snapshot or {})
+                    proposed = state.get("proposed_actions")
+                    if "description" not in pending_snapshot and proposed and len(proposed) > 0:
+                        pending_snapshot["description"] = proposed[0].get("description", "")
+                    cs["pending_action"] = pending_snapshot
+                    sess.context_snapshot = cs
+
                 sess.expires_at = datetime.now(UTC) + timedelta(hours=24)
 
             # Complete idempotency + clear turn

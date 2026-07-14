@@ -7,7 +7,6 @@ Phase 02 regression pass-through.
 
 import uuid
 
-import pytest
 from httpx import AsyncClient
 
 
