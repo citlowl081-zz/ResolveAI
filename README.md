@@ -27,6 +27,7 @@ Users can browse products, place orders, check logistics, and initiate after-sal
 | RAG | pgvector embeddings + hybrid retrieval |
 | Frontend (Customer) | Next.js 14, TypeScript, Tailwind CSS, shadcn/ui |
 | Frontend (Admin) | Next.js 14, TypeScript, Tailwind CSS, shadcn/ui |
+| Mini Program | WeChat Native Mini Program (planned) |
 | Testing | pytest, React Testing Library |
 | Deployment | Docker, Docker Compose |
 
@@ -68,6 +69,7 @@ resolve-ai/
 ├── Makefile                # Development commands
 ├── backend/                # Python backend (FastAPI + LangGraph)
 ├── frontend/               # Next.js frontends (customer + admin)
+├── miniprogram/            # WeChat Mini Program (planned Phase 07)
 ├── docs/                   # Architecture & design documentation
 ├── tasks/                  # Phase-based task tracking
 ├── data/                   # Seed data, policies, evaluation cases

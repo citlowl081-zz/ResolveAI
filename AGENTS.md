@@ -25,7 +25,8 @@
 ### 3. Architecture Constraints
 
 - **Backend:** Python 3.12, FastAPI, SQLAlchemy 2, Pydantic 2, LangGraph, PostgreSQL + pgvector.
-- **Frontend:** Next.js 14, TypeScript, Tailwind CSS, shadcn/ui.
+- **Frontend (Web):** Next.js 14, TypeScript, Tailwind CSS, shadcn/ui (customer-web + admin-web).
+- **Frontend (Mini Program):** WeChat Native Mini Program (planned Phase 07, shares backend with Web).
 - **Deployment:** Docker, Docker Compose.
 - **No microservices, no Kafka, no Redis (Phases 00–06).**
 - Follow the layered architecture: API → Service → Repository → Database.

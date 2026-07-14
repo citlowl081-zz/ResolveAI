@@ -68,6 +68,20 @@ An AI-powered e-commerce after-sales intelligent ticket agent. Portfolio project
 - **Package Manager:** pip + npm
 - **Database:** PostgreSQL 16 (via Docker)
 
+## Project Structure
+
+```
+ResolveAI/
+├── backend/        # Python FastAPI backend (unified API)
+├── frontend/       # Next.js — customer-web + admin-web (share backend)
+├── miniprogram/    # WeChat Mini Program (planned Phase 07, shares backend)
+├── docs/           # Architecture & design docs
+├── tasks/          # Phase-based task files
+├── reports/        # Progress reports
+├── scripts/        # Utility scripts
+└── .github/        # CI workflows
+```
+
 ## Key Constraints
 
 - Phase 00: Planning only — no implementation code.

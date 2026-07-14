@@ -75,5 +75,13 @@ temp/
 reports/progress/*.html
 reports/progress/*.pdf
 
+# ---- WeChat Mini Program ----
+miniprogram/project.config.json
+miniprogram/project.private.config.json
+# WeChat DevTools local cache & temp files
+miniprogram/.idea/
+miniprogram/miniprogram/.tea/
+miniprogram/node_modules/
+
 # ---- Alembic ----
 # (keep versions/ directory tracked)
