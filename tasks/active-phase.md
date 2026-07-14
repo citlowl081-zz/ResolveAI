@@ -1,42 +1,44 @@
 # Active Phase
 
-**Current Phase:** Phase 03 — Agent Tools (FINAL TURN LIFECYCLE FIX — v10)
+**Current Phase:** Phase 03 — Agent Tools (COMPLETE)
 
-**Previous Phase:** Phase 02 — Business Backend ✅ (COMPLETE, Remote CI Verified)
+**Next Phase:** Phase 04 — RAG Knowledge Base (Not started)
 
-## Phase 02 Status: ✅ COMPLETE
+## Phase 03 Status: ✅ COMPLETE
 
-### Phase 02A — Core Commerce Backend ✅
-- 8 tables, 5 enums, 18 API endpoints. JWT auth with RBAC, order lifecycle.
-- 33 self-contained tests, CI green. Completed: 2026-07-13.
+- **LangGraph:** 9 functional nodes (receive_message → load_session → build_context → classify_intent → select_tools → authorize_tool → execute_tool → handle_tool_error → compose_response). persist_messages placeholder removed.
+- **ModelProvider:** Abstract ABC with AnthropicProvider + MockProvider. Provider injected via AgentOrchestrator constructor. classify_intent and compose_response use LLM primary path with keyword/template fallback.
+- **Tools:** 7 customer-facing tools wrapping Phase 02 Services. Write tools via pending_action → confirm_action_id flow. allowed_roles = {UserRole.CUSTOMER}.
+- **Database:** 4 new tables (agent_sessions, agent_messages, agent_tool_logs, agent_traces) + 2 new enums (session_status, message_role). Migration 004 with active_turn CHECK constraint, partial unique indexes.
+- **Turn Lifecycle:** 6 active_turn_* columns. Atomic acquisition (WHERE active_turn_id IS NULL). Atomic release only in TX-B (success or terminal error). RECOVERABLE_INTERRUPTION preserves turn identity.
+- **Idempotency:** API-level via Idempotency-Key header. Tool-level via SHA256(session_id + action_id + tool_name + canonical_hash). bind_resource() early session binding.
+- **Trace:** Per-node persistence via node_timings in complete_turn(). Failed nodes traced with is_success=false. trace_id uses PostgreSQL UUID type.
+- **API:** 10 endpoints (6 customer + 4 admin). Sync HTTP only.
+- **Tests:** 155 passed (49 Phase 02 + 12 Agent API + 54 AnthropicProvider + 25 Verification + 15 Recovery/Transactions). LLM_PROVIDER=mock only. Zero real API keys.
+- **Quality:** Pip check PASS. Ruff PASS. Mypy PASS (app/ + tests/, 143 source files, 0 errors).
+- **GitHub Actions:** All green after CI dependency fix (langgraph + anthropic declared in pyproject.toml, LLM_PROVIDER=mock in test job).
 
-### Phase 02B — After-sales Business Backend ✅
-- 3 new tables, 5 new enums, 2 sequences, order_status extension.
-- 13 API endpoints. Cumulative refund cap, lock ordering, cross-key dedup.
-- 16 new integration tests (49 total), CI green. Completed: 2026-07-14.
+## Directory Structure
 
-## Phase 03 — Agent Tools (Final Planning — v10)
-
-Turn lifecycle + atomic release fix. Awaiting user approval.
-
-- **Turn Lifecycle:** active_turn_* ONLY cleared atomically with idempotency COMPLETION. Two legal clear paths: success TX-B and terminal error TX-B. Never cleared in crash handler.
-- **Exception Classification:** TERMINAL_ERROR (atomic complete+clear), RECOVERABLE_INTERRUPTION (preserve turn identity, keep idempotency PROCESSING), STATE_CORRUPTION (500, no guessing).
-- **Same-Key Recovery:** Reuses active_turn_id + active_turn_trace_id from preserved row. Recovers from persisted messages + tool_logs.
-- **Different-Key Cleanup:** Application-layer SHA-256 key hash matching. No pgcrypto dependency.
-- **State Corruption:** PROCESSING + active_turn_id IS NULL → AGENT_TURN_STATE_CORRUPTED → 500.
-- **17 Error Codes:** Added AGENT_TURN_STATE_CORRUPTED (#17).
-- **~100 Tests:** 22 test files. Phase 02 regression must pass unchanged.
-
-## Sub-Phase Documents
-
-- [Phase 02A — Core Commerce Backend](phase-02A-core-commerce.md) ✅
-- [Phase 02B — After-sales Business Backend](phase-02B-after-sales.md) ✅
-- [Phase 02 — Business Backend (Index)](phase-02-business-backend.md) ✅
-- [Phase 03 — Agent Tools](phase-03-agent-tools.md) 📋 (v7 final planning)
+```
+ResolveAI/
+├── backend/               # Unified Python FastAPI backend
+├── frontend/
+│   ├── customer-web/      # Next.js customer frontend
+│   └── admin-web/         # Next.js admin frontend
+├── miniprogram/           # WeChat Mini Program (planned Phase 07)
+├── docs/                  # Architecture & design
+├── tasks/                 # Phase task files
+└── reports/               # Progress reports
+```
 
 ## Sub-Phase Documents
 
 - [Phase 02A — Core Commerce Backend](phase-02A-core-commerce.md) ✅
 - [Phase 02B — After-sales Business Backend](phase-02B-after-sales.md) ✅
 - [Phase 02 — Business Backend (Index)](phase-02-business-backend.md) ✅
-- [Phase 03 — Agent Tools](phase-03-agent-tools.md) 📋 (planning complete)
+- [Phase 03 — Agent Tools](phase-03-agent-tools.md) ✅
+
+## Next Step
+
+Phase 04 — RAG Knowledge Base. Planning not yet started. Do NOT begin implementation until Phase 03 is fully closed (documentation complete, handoff updated, CI confirmed green).
