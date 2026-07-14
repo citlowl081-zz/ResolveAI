@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 
-from pgvector.sqlalchemy import Vector  # type: ignore[import-untyped]
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import DateTime, ForeignKey, Integer, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -40,7 +40,7 @@ class PolicyChunk(Base):
         Integer, nullable=False, comment="0-based position within the version"
     )
     content: Mapped[str] = mapped_column(Text, nullable=False)
-    embedding: Mapped[list[float]] = mapped_column(  # type: ignore[valid-type]
+    embedding: Mapped[list[float]] = mapped_column(
         Vector(1536),
         nullable=False,
         comment="pgvector embedding (1536 dimensions)",
