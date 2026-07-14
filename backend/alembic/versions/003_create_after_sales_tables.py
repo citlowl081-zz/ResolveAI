@@ -33,29 +33,17 @@ def upgrade() -> None:
 
     # ---- 2. Extend order_status enum ----
     # CREATE TYPE new → convert → DROP old → RENAME
-    order_status_new = postgresql.ENUM(
-        "PENDING_PAYMENT", "PAID", "SHIPPED", "DELIVERED",
-        "CANCELLED", "REFUNDED",
-        name="order_status_new", create_type=True,
-    )
+    # Use raw SQL for enum operations to avoid Alembic emit-ordering issues
+    op.execute(sa.text(
+        "CREATE TYPE order_status_new AS ENUM ("
+        "'PENDING_PAYMENT','PAID','SHIPPED','DELIVERED','CANCELLED','REFUNDED')"
+    ))
     op.execute(sa.text(
         "ALTER TABLE orders ALTER COLUMN status TYPE order_status_new "
         "USING status::text::order_status_new"
     ))
-    # Drop old type
-    sa.Enum(name="order_status").drop(op.get_bind(), checkfirst=True)
-    order_status_new_rename = postgresql.ENUM(
-        "PENDING_PAYMENT", "PAID", "SHIPPED", "DELIVERED",
-        "CANCELLED", "REFUNDED",
-        name="order_status", create_type=False,
-    )
-    order_status_new_rename.create(op.get_bind(), checkfirst=True)
-    op.execute(sa.text(
-        "ALTER TABLE orders ALTER COLUMN status TYPE order_status "
-        "USING status::text::order_status"
-    ))
-    sa.Enum(name="order_status_new").drop(op.get_bind(), checkfirst=True)
-    # Re-add any server_default if needed — orders.status has no default, skip.
+    op.execute(sa.text("DROP TYPE order_status"))
+    op.execute(sa.text("ALTER TYPE order_status_new RENAME TO order_status"))
 
     # ---- 3. New Enums (5) ----
     intent_type = postgresql.ENUM(
@@ -231,26 +219,17 @@ def downgrade() -> None:
     op.execute(sa.text("DROP SEQUENCE reshipment_number_seq"))
     op.execute(sa.text("DROP SEQUENCE ticket_number_seq"))
 
-    # Revert order_status enum
-    order_status_old = postgresql.ENUM(
-        "PENDING_PAYMENT", "PAID", "SHIPPED", "DELIVERED", "CANCELLED",
-        name="order_status_old", create_type=True,
-    )
+    # Revert order_status enum (assertions already verified no REFUNDED rows)
+    op.execute(sa.text(
+        "CREATE TYPE order_status_old AS ENUM ("
+        "'PENDING_PAYMENT','PAID','SHIPPED','DELIVERED','CANCELLED')"
+    ))
     op.execute(sa.text(
         "ALTER TABLE orders ALTER COLUMN status TYPE order_status_old "
         "USING status::text::order_status_old"
     ))
-    sa.Enum(name="order_status").drop(op.get_bind(), checkfirst=True)
-    order_status_old_rename = postgresql.ENUM(
-        "PENDING_PAYMENT", "PAID", "SHIPPED", "DELIVERED", "CANCELLED",
-        name="order_status", create_type=False,
-    )
-    order_status_old_rename.create(op.get_bind(), checkfirst=True)
-    op.execute(sa.text(
-        "ALTER TABLE orders ALTER COLUMN status TYPE order_status "
-        "USING status::text::order_status"
-    ))
-    sa.Enum(name="order_status_old").drop(op.get_bind(), checkfirst=True)
+    op.execute(sa.text("DROP TYPE order_status"))
+    op.execute(sa.text("ALTER TYPE order_status_old RENAME TO order_status"))
 
     # Drop new enums
     sa.Enum(name="reshipment_status").drop(op.get_bind(), checkfirst=True)

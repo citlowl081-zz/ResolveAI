@@ -299,7 +299,7 @@ class OrderService:
             "cancel_reason": order.cancel_reason,
             "version": order.version,
             "created_at": order.created_at.isoformat() if order.created_at else None,
-            "items": [{"product_id": str(i.product_id), "product_name": i.product_name,
+            "items": [{"id": str(i.id), "product_id": str(i.product_id), "product_name": i.product_name,
                         "unit_price": str(i.unit_price), "quantity": i.quantity,
                         "subtotal": str(i.subtotal)} for i in items],
         }

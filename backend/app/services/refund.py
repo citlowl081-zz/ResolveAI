@@ -87,9 +87,7 @@ class RefundService:
         if not requested_items:
             raise ValidationError("Ticket has no requested_items")
 
-        product_ids = sorted(set(
-            uuid.UUID(item["product_id"]) for item in requested_items
-        ))
+        product_ids = sorted({uuid.UUID(item["product_id"]) for item in requested_items})
         products = await self.product_repo.get_by_ids_for_update(product_ids)
         product_map = {p.id: p for p in products}
 
@@ -138,10 +136,7 @@ class RefundService:
                 is_full = False
                 break
 
-        if is_full:
-            refund_type_str = RefundType.FULL.value
-        else:
-            refund_type_str = RefundType.PARTIAL.value
+        refund_type_str = RefundType.FULL.value if is_full else RefundType.PARTIAL.value
 
         # Calculate refund
         calc_input = RefundCalcInput(

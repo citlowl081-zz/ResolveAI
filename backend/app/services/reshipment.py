@@ -90,9 +90,7 @@ class ReshipmentService:
         if not requested_items:
             raise ValidationError("Ticket has no requested_items")
 
-        product_ids = sorted(set(
-            uuid.UUID(item["product_id"]) for item in requested_items
-        ))
+        product_ids = sorted({uuid.UUID(item["product_id"]) for item in requested_items})
         products = await self.product_repo.get_by_ids_for_update(product_ids)
         product_map = {p.id: p for p in products}
 
@@ -362,7 +360,7 @@ class ReshipmentService:
             reshipment.missing_items if isinstance(reshipment.missing_items, list) else []
         )
         if missing_items:
-            product_ids = sorted(set(uuid.UUID(item["product_id"]) for item in missing_items))
+            product_ids = sorted({uuid.UUID(item["product_id"]) for item in missing_items})
             await self.product_repo.get_by_ids_for_update(product_ids)
             for item in missing_items:
                 pid = uuid.UUID(item["product_id"])
