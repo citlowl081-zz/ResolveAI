@@ -10,9 +10,9 @@
 
 **Phase 07A — Customer Web & Admin Web: COMPLETE**
 
-Phase 07 is fully implemented across 07A and 07B. All three frontends build successfully.
-Key deliverables: Customer Web (13 routes, Next.js 14), Admin Web (9 routes, Next.js 14), WeChat Mini Program (12 pages, native TypeScript). All use real backend API via unified client with auth + token refresh. Citations, proposed actions, approval status, tool logs, and traces clearly visible. .env.example provided, .gitignore protects secrets.
-Next phase: Phase 08 — Evaluation & Observability (not started).
+Phase 08 is fully implemented. 467 tests pass with zero failures.
+Key deliverables: 7 E2E business scenarios, 12 Agent/RAG/Memory metrics with real values, 14 security tests (RBAC/IDOR/PII), 4 concurrency tests, 6 performance baselines, Playwright E2E config for both frontends (15 specs), comprehensive evaluation report in `reports/phase-08-evaluation-report.md`.
+Next phase: Phase 09 — Deployment & CI/CD (not started).
 
 ---
 

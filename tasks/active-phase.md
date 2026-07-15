@@ -1,9 +1,9 @@
 # Active Phase
 
-**Current Phase:** Phase 07 — Frontend (COMPLETE)
+**Current Phase:** Phase 08 — Evaluation, Testing & Quality Hardening (COMPLETE)
 
-**Previous Phase:** Phase 06 — Human-in-the-Loop (COMPLETE)
-**Next Phase:** Phase 08 — Evaluation & Observability (Not started)
+**Previous Phase:** Phase 07 — Frontend (COMPLETE)
+**Next Phase:** Phase 09 — Deployment & CI/CD (Not started)
 
 ## Phase 05 Status: ✅ COMPLETE
 
@@ -97,6 +97,49 @@ All three frontends implemented:
 - **API integration:** 100% real backend API, no static mock data
 - **Configuration:** .env.example for Web apps, project.config.example.json for miniprogram
 
+## Phase 08 Status: ✅ COMPLETE
+
+- **467 tests total, 0 failures** (214 unit + 173 integration + 47 eval + 33 new eval)
+- **Evaluation report:** `reports/phase-08-evaluation-report.md`
+
+### E2E Business Scenarios (7 scenarios, 10 tests)
+All 7 business scenarios pass via real backend API:
+1. Policy consultation → real citation
+2. Order/logistics query
+3. Low-risk after-sales → ticket
+4. High-risk after-sales → approval
+5. Memory lifecycle (write → read → delete)
+6. Empty RAG → no fabrication
+7. Permission isolation (CUSTOMER/OPERATOR/ADMIN boundaries)
+
+### Agent Metrics (9 tests, all with real values)
+| Metric | Value | Threshold |
+|---|---|---|
+| Intent Accuracy | 0.800 | ≥ 0.75 |
+| Tool Selection | 0.800 | ≥ 0.70 |
+| RAG Precision@1 | 0.667 | ≥ 0.50 |
+| RAG HitRate@5 | 0.952 | ≥ 0.85 |
+| RAG MRR | 0.775 | ≥ 0.60 |
+| Fabrication Rate | 0.000 | = 0 |
+| Memory Write Acc | 1.000 | ≥ 0.80 |
+| Memory False Write | 0.833 | ≥ 0.80 |
+
+### Security (14 tests)
+RBAC (7 resource types), IDOR, PII leaks, sensitive memory rejection, password in responses — all PASS.
+
+### Concurrency (4 tests)
+Agent idempotency, memory dedup, concurrent sessions, approval locking — all PASS.
+
+### Performance (6 tests)
+Health <500ms, Auth <1000ms, Products <1000ms, Orders <1000ms, Agent <5s, no DB connection leaks.
+
+### Playwright E2E (15 specs)
+Customer Web: 8 specs (login, register, home, agent, products, orders, approvals, memories)
+Admin Web: 7 specs (login, home, tickets, approvals, policies, traces, tool-logs)
+
+### Quality Gates
+pip check PASS, ruff PASS (0 errors), mypy PASS (205 files, 0 errors), pytest PASS (467/467), migration cycle PASS, customer-web build PASS, admin-web build PASS
+
 ## Phase 03 Status: ✅ COMPLETE
 
 - **LangGraph:** 9 functional nodes (receive_message → load_session → build_context → classify_intent → select_tools → authorize_tool → execute_tool → handle_tool_error → compose_response). persist_messages placeholder removed.
@@ -157,4 +200,4 @@ Phase 04 implementation plan approved (revision 4). See `tasks/phase-04-rag.md` 
 
 ## Next Step
 
-Phase 08 — Evaluation & Observability (Not started). Do NOT begin until Phase 07 is committed and pushed with CI green.
+Phase 09 — Deployment & CI/CD (Not started). Do NOT begin until Phase 08 is committed and pushed with CI green.
