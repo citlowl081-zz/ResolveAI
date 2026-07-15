@@ -101,7 +101,7 @@ class PolicyChunkRepository(BaseRepository):
         """)
 
         result = await self.session.execute(
-            sql.bindparams(  # type: ignore[union-attr]
+            sql.bindparams(
                 sa.bindparam("category", value=category, type_=sa.String()),
                 sa.bindparam("max_candidates", value=top_k * 3, type_=sa.Integer()),
             ),

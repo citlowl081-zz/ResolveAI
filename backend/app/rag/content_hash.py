@@ -49,8 +49,8 @@ def compute_content_hash(doc: dict[str, Any]) -> str:
         "content": doc.get("content", ""),
         "content_summary": _or_empty(doc.get("content_summary")),
         "metadata_filter": _canonicalize_metadata(doc.get("metadata_filter", {})),
-        "effective_date": _or_empty(doc.get("effective_date")),
-        "expiration_date": _or_empty(doc.get("expiration_date")),
+        "effective_date": _date_to_str(doc.get("effective_date")),
+        "expiration_date": _date_to_str(doc.get("expiration_date")),
         "source": _or_empty(doc.get("source")),
     }
 
@@ -68,6 +68,16 @@ def compute_content_hash(doc: dict[str, Any]) -> str:
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+def _date_to_str(value: Any) -> Any:
+    """Convert a date/datetime to ISO string, pass through everything else."""
+    from datetime import date as date_type
+    from datetime import datetime as dt_type
+
+    if isinstance(value, (date_type, dt_type)):
+        return value.isoformat()
+    return _or_empty(value)
 
 
 def _or_empty(value: Any) -> Any:

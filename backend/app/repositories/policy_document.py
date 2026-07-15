@@ -57,6 +57,32 @@ class PolicyDocumentRepository(BaseRepository):
 
     # ── Collections ──────────────────────────────────────────────────
 
+    async def list_all(
+        self,
+        page: int = 1,
+        page_size: int = 20,
+        category: str | None = None,
+        status: str | None = None,
+    ) -> tuple[list[PolicyDocument], int]:
+        """Return (rows, total) across all policy_keys, newest version first."""
+        base = select(PolicyDocument)
+        if category:
+            base = base.where(PolicyDocument.category == category)
+        if status:
+            base = base.where(PolicyDocument.status == status)
+
+        count_q = select(func.count()).select_from(base.subquery())
+        total_result = await self.session.execute(count_q)
+        total = total_result.scalar() or 0
+
+        query = base.order_by(
+            PolicyDocument.policy_key.asc(),
+            PolicyDocument.version.desc(),
+        )
+        query = self._paginate(query, page, page_size)
+        result = await self.session.execute(query)
+        return list(result.scalars().all()), total
+
     async def list_versions(
         self,
         policy_key: str,
