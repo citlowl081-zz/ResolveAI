@@ -1,0 +1,13 @@
+<view class="container" style="padding-top:120rpx">
+  <view style="text-align:center;margin-bottom:60rpx">
+    <text style="font-size:48rpx;font-weight:bold;color:#2563eb">ResolveAI</text>
+    <view style="color:#9ca3af;margin-top:12rpx">AI 驱动售后智能客服</view>
+  </view>
+  <input class="input" placeholder="邮箱" bindinput="onEmail" value="{{email}}" type="text" />
+  <input class="input" placeholder="密码" bindinput="onPwd" value="{{password}}" type="password" />
+  <view wx:if="{{error}}" class="error-text">{{error}}</view>
+  <button class="btn btn-primary" bindtap="login" loading="{{loading}}" disabled="{{loading}}">登录</button>
+  <view style="text-align:center;margin-top:30rpx">
+    <navigator url="/pages/register/register" style="color:#2563eb">还没有账号？立即注册</navigator>
+  </view>
+</view>

@@ -1,9 +1,9 @@
 # Active Phase
 
-**Current Phase:** Phase 06 — Human-in-the-Loop (COMPLETE)
+**Current Phase:** Phase 07 — Frontend (COMPLETE)
 
-**Previous Phase:** Phase 05 — Memory System (COMPLETE)
-**Next Phase:** Phase 07 — Frontend (Not started)
+**Previous Phase:** Phase 06 — Human-in-the-Loop (COMPLETE)
+**Next Phase:** Phase 08 — Evaluation & Observability (Not started)
 
 ## Phase 05 Status: ✅ COMPLETE
 
@@ -30,6 +30,72 @@
 - **Payload Integrity:** execute endpoint loads sanitized_action_payload from DB — client cannot inject alternative payload
 - **9-node LangGraph preserved:** Approval check happens before graph invocation, not as a new node
 - **Tests:** 35 new tests (10 unit + 16 integration + 9 agent integration), 424 total (0 failures)
+
+## Phase 07A Status: ✅ COMPLETE (Customer Web + Admin Web)
+
+- **Customer Web:** 10 pages — Login, Register, Home, Products (list+detail), Orders (list+detail), Agent Chat (messages+citations+actions+approval+confirm), Tickets (list+cancel), Memories (CRUD), Approvals (list)
+- **Admin Web:** 8 pages — Login, Dashboard (ticket count+pending approvals), Tickets (list+filter+paginate), Approvals (list+approve+reject+execute), Policies (list), Traces (table+paginate), Tool Logs (table+paginate)
+- **Shared Foundation:** APIResponse envelope types, API client with auth header+token refresh+401 handling, AuthContext with login/register/logout, Navbar with navigation, Tailwind responsive layout
+- **API Integration:** All pages call real backend endpoints via fetch; no static mock data; NEXT_PUBLIC_API_BASE_URL configurable
+- **UI:** Tailwind CSS, same visual language across both apps, loading/empty/error states on all pages, citations displayed with policy_key+version+similarity, approval status color-coded, confirmation dialog for agent actions
+
+### Phase 07A Customer Web Pages
+
+| Page | Route | Features |
+|---|---|---|
+| Login | /login | Email/password, error state |
+| Register | /register | Email/password/name |
+| Home | / | Auth gate, nav cards |
+| Products | /products | List from API |
+| Product Detail | /products/[id] | Detail view |
+| Orders | /orders | List with status badges |
+| Order Detail | /orders/[id] | Items, logistics |
+| Agent Chat | /agent | Messages, citations, actions, approval, confirm/decline |
+| Tickets | /tickets | List, cancel |
+| Memories | /memories | CRUD with create form |
+| Approvals | /approvals | List with status |
+
+### Phase 07A Admin Web Pages
+
+| Page | Route | Features |
+|---|---|---|
+| Login | /login | Admin auth gate |
+| Dashboard | / | Ticket count, pending approvals, nav |
+| Tickets | /tickets | List, status filter, paginate |
+| Approvals | /approvals | List, approve, reject, execute |
+| Policies | /policies | List with version/status |
+| Traces | /traces | Table, paginate |
+| Tool Logs | /tool-logs | Table, paginate |
+
+- **Build:** Both apps `next build` PASS (0 type errors)
+
+### Phase 07B — WeChat Mini Program ✅
+
+- **12 pages:** login, register, index (home with 6 nav cards), products (list+detail), orders (list+detail with logistics), agent (messages+citations+actions+approval+confirm/decline), tickets (list+cancel), memories (CRUD), approvals (list), profile (logout)
+- **API client:** wx.request wrapper with auth header, token refresh, 401 → login redirect, unified error handling
+- **Global state:** app.globalData for accessToken/refreshToken/userInfo/apiBase
+- **UI:** Global WXSS class library (card, btn, badge, flex-row, etc.), blue theme matching Customer Web, loading/empty/error states on all pages
+- **24 files** (4 per page: wxml+ts+json+wxss) + app.ts + app.js + app.json + app.wxss + services/api.ts + utils/util.ts + typings/types.d.ts
+
+### Phase 07B Agent Chat Features
+
+| Feature | Implementation |
+|---|---|
+| Messages | scroll-view with user (blue right) / assistant (white left) bubbles |
+| Citations | Policy key, version, title displayed below assistant messages |
+| Proposed actions | Blue info box below message + confirm/cancel button bar |
+| PENDING_APPROVAL | Yellow warning box with approval type and status |
+| Error handling | System message shown on API failure |
+| Empty state | Welcome screen with guidance text |
+
+## Phase 07 Overall: ✅ COMPLETE
+
+All three frontends implemented:
+- **Customer Web:** 13 routes, Next.js 14 + Tailwind, builds with 0 type errors
+- **Admin Web:** 9 routes, Next.js 14 + Tailwind, builds with 0 type errors
+- **WeChat Mini Program:** 12 pages, native TypeScript framework, 36 source files
+- **API integration:** 100% real backend API, no static mock data
+- **Configuration:** .env.example for Web apps, project.config.example.json for miniprogram
 
 ## Phase 03 Status: ✅ COMPLETE
 
@@ -91,4 +157,4 @@ Phase 04 implementation plan approved (revision 4). See `tasks/phase-04-rag.md` 
 
 ## Next Step
 
-Phase 07 — Frontend (Not started). Do NOT begin until Phase 06 is committed and pushed with CI green.
+Phase 08 — Evaluation & Observability (Not started). Do NOT begin until Phase 07 is committed and pushed with CI green.

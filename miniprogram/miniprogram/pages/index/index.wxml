@@ -1,0 +1,37 @@
+<view class="container">
+  <view style="text-align:center;padding:40rpx 0">
+    <text style="font-size:36rpx;font-weight:bold">欢迎, {{userName}}</text>
+  </view>
+  <view style="display:grid;grid-template-columns:1fr 1fr;gap:16rpx">
+    <navigator url="/pages/agent/agent" class="card" style="text-align:center">
+      <view style="font-size:48rpx;margin-bottom:10rpx">🤖</view>
+      <view style="font-weight:600">智能客服</view>
+      <view class="text-sm text-gray">AI 售后助手</view>
+    </navigator>
+    <navigator url="/pages/orders/orders" class="card" style="text-align:center">
+      <view style="font-size:48rpx;margin-bottom:10rpx">📦</view>
+      <view style="font-weight:600">我的订单</view>
+      <view class="text-sm text-gray">查看物流</view>
+    </navigator>
+    <navigator url="/pages/tickets/tickets" class="card" style="text-align:center">
+      <view style="font-size:48rpx;margin-bottom:10rpx">📋</view>
+      <view style="font-weight:600">售后服务</view>
+      <view class="text-sm text-gray">工单管理</view>
+    </navigator>
+    <navigator url="/pages/memories/memories" class="card" style="text-align:center">
+      <view style="font-size:48rpx;margin-bottom:10rpx">🧠</view>
+      <view style="font-weight:600">我的记忆</view>
+      <view class="text-sm text-gray">偏好管理</view>
+    </navigator>
+    <navigator url="/pages/approvals/approvals" class="card" style="text-align:center">
+      <view style="font-size:48rpx;margin-bottom:10rpx">⏳</view>
+      <view style="font-weight:600">审批状态</view>
+      <view class="text-sm text-gray">审核进度</view>
+    </navigator>
+    <navigator url="/pages/profile/profile" class="card" style="text-align:center">
+      <view style="font-size:48rpx;margin-bottom:10rpx">👤</view>
+      <view style="font-weight:600">个人中心</view>
+      <view class="text-sm text-gray">账号管理</view>
+    </navigator>
+  </view>
+</view>

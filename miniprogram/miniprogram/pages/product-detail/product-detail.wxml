@@ -1,0 +1,12 @@
+<view class="container">
+  <block wx:if="{{loading}}"><view class="loading-text">加载中...</view></block>
+  <block wx:elif="{{product}}">
+    <view class="card">
+      <view style="font-size:36rpx;font-weight:bold">{{product.name}}</view>
+      <view class="text-sm text-gray mt-2">分类: {{product.category}}</view>
+      <view style="font-size:40rpx;font-weight:bold;color:#2563eb;margin-top:16rpx">¥{{product.price}}</view>
+      <view class="text-sm text-gray mt-2">库存: {{product.stock}}</view>
+      <view class="text-sm mt-2">{{product.is_returnable ? '支持退换' : '不可退换'}}</view>
+    </view>
+  </block>
+</view>

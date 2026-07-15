@@ -1,0 +1,15 @@
+<view class="container">
+  <view style="font-size:36rpx;font-weight:bold;margin-bottom:24rpx">审批状态</view>
+  <block wx:if="{{loading}}"><view class="loading-text">加载中...</view></block>
+  <block wx:elif="{{items.length===0}}"><view class="empty-text">暂无审批</view></block>
+  <view wx:for="{{items}}" wx:key="id" class="card">
+    <view class="flex-between">
+      <text class="text-sm text-gray">ID: {{item.id}}</text>
+      <text class="badge {{item.status==='PENDING'?'badge-yellow':item.status==='APPROVED'?'badge-green':'badge-red'}}">{{item.status}}</text>
+    </view>
+    <view class="text-sm mt-2">类型: {{item.approval_type}} | 操作: {{item.tool_name}}</view>
+    <view class="text-sm">风险: {{item.risk_level}}</view>
+    <view wx:if="{{item.reason}}" class="text-sm text-gray mt-2">原因: {{item.reason}}</view>
+    <view wx:if="{{item.decision_reason}}" class="text-sm text-gray mt-2">决定: {{item.decision_reason}}</view>
+  </view>
+</view>

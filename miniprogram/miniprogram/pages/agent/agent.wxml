@@ -1,0 +1,45 @@
+<view class="container" style="display:flex;flex-direction:column;height:100vh;padding:0">
+  <scroll-view scroll-y style="flex:1;padding:24rpx" scroll-into-view="msg-{{messages.length-1}}">
+    <block wx:if="{{messages.length===0}}">
+      <view style="text-align:center;padding:120rpx 0;color:#9ca3af">
+        <view style="font-size:60rpx;margin-bottom:20rpx">🤖</view>
+        <view style="font-size:32rpx;margin-bottom:12rpx">欢迎使用智能客服</view>
+        <view class="text-sm">您可以询问订单、物流、退款和售后问题</view>
+      </view>
+    </block>
+    <view wx:for="{{messages}}" wx:key="index" id="msg-{{index}}" style="margin-bottom:24rpx">
+      <view style="display:flex;flex-direction:{{item.role==='user'?'row-reverse':'row'}}">
+        <view style="max-width:80%;padding:18rpx 24rpx;border-radius:16rpx;font-size:28rpx;
+          {{item.role==='user'?'background:#2563eb;color:#fff':'background:#fff;border:1rpx solid #e5e7eb'}}">
+          <text>{{item.content}}</text>
+          <!-- Citations -->
+          <view wx:if="{{item.citations && item.citations.length}}" style="margin-top:12rpx;padding-top:12rpx;border-top:1rpx solid #e5e7eb">
+            <text style="font-weight:600;font-size:22rpx;color:#6b7280">📋 政策引用:</text>
+            <view wx:for="{{item.citations}}" wx:key="policy_key" wx:for-item="c" style="font-size:22rpx;color:#6b7280;margin-top:6rpx">
+              <text style="font-family:monospace;background:#f3f4f6;padding:2rpx 8rpx;border-radius:4rpx">{{c.policy_key}}</text> v{{c.version}} — {{c.title}}
+            </view>
+          </view>
+          <!-- Proposed Action -->
+          <view wx:if="{{item.action}}" style="margin-top:12rpx;padding:12rpx;background:#dbeafe;border-radius:8rpx;font-size:24rpx">
+            <text style="font-weight:600;color:#1d4ed8">📌 待确认: {{item.action.description}}</text>
+          </view>
+          <!-- PENDING_APPROVAL -->
+          <view wx:if="{{item.approval}}" style="margin-top:12rpx;padding:12rpx;background:#fef9c3;border-radius:8rpx;font-size:24rpx">
+            <text style="font-weight:600;color:#a16207">⏳ 等待人工审批</text>
+            <text style="color:#a16207">类型: {{item.approval.approval_type}} | 状态: {{item.approval.status}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </scroll-view>
+  <!-- Confirm/Cancel bar -->
+  <view wx:if="{{pendingAction}}" style="padding:16rpx 24rpx;display:flex;gap:16rpx;background:#fff;border-top:1rpx solid #e5e7eb">
+    <button bindtap="confirm" style="flex:1;background:#16a34a;color:#fff;border-radius:12rpx;font-size:28rpx">确认执行</button>
+    <button bindtap="decline" style="flex:1;background:#e5e7eb;color:#374151;border-radius:12rpx;font-size:28rpx">取消</button>
+  </view>
+  <!-- Input bar -->
+  <view style="padding:16rpx 24rpx;background:#fff;border-top:1rpx solid #e5e7eb;display:flex;gap:12rpx">
+    <input value="{{input}}" bindinput="onInput" placeholder="输入您的问题..." style="flex:1;padding:16rpx;border:1rpx solid #e5e7eb;border-radius:12rpx;font-size:28rpx" confirm-type="send" bindconfirm="doSend" />
+    <button bindtap="doSend" disabled="{{!input||sending}}" style="padding:16rpx 24rpx;background:#2563eb;color:#fff;border-radius:12rpx;font-size:28rpx">{{sending?'...':'发送'}}</button>
+  </view>
+</view>

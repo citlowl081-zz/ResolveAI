@@ -1,0 +1,25 @@
+<view class="container">
+  <view class="flex-between" style="margin-bottom:24rpx">
+    <text style="font-size:36rpx;font-weight:bold">我的记忆</text>
+    <button bindtap="toggleForm" style="font-size:24rpx;padding:12rpx 20rpx;background:#2563eb;color:#fff;border-radius:8rpx">{{showForm?'取消':'新建'}}</button>
+  </view>
+  <!-- Create form -->
+  <view wx:if="{{showForm}}" class="card">
+    <picker value="{{typeIdx}}" range="{{typeOptions}}" bindchange="onType" style="margin-bottom:16rpx"><view class="input">{{typeOptions[typeIdx]}}</view></picker>
+    <input class="input" placeholder="Key (可选)" bindinput="onKey" value="{{memKey}}" />
+    <textarea class="input" placeholder="内容" bindinput="onContent" value="{{memContent}}" style="height:120rpx" />
+    <button bindtap="create" class="btn btn-success" style="font-size:24rpx;padding:12rpx">保存</button>
+  </view>
+  <block wx:if="{{loading}}"><view class="loading-text">加载中...</view></block>
+  <block wx:elif="{{items.length===0}}"><view class="empty-text">暂无记忆</view></block>
+  <view wx:for="{{items}}" wx:key="id" class="card">
+    <view class="flex-row" style="gap:12rpx;margin-bottom:8rpx">
+      <text class="badge badge-blue">{{item.memory_type}}</text>
+      <text wx:if="{{item.key}}" class="text-sm text-gray">{{item.key}}</text>
+      <text class="text-sm text-gray">v{{item.version}}</text>
+    </view>
+    <view style="font-size:28rpx">{{item.content}}</view>
+    <view class="text-sm text-gray mt-2">来源: {{item.source}} | 置信度: {{item.confidence*100}}%</view>
+    <button bindtap="remove" data-id="{{item.id}}" style="font-size:22rpx;color:#dc2626;background:none;padding:8rpx 0;text-align:left">删除</button>
+  </view>
+</view>

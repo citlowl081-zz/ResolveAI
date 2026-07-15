@@ -1,18 +1,18 @@
 # ResolveAI — Current Handoff
 
 **Date:** 2026-07-15
-**Generated:** After Phase 06 completion
-**Updated:** Phase 06 COMPLETE — Human approval system with risk-based escalation, optimistic locking, payload integrity
+**Generated:** After Phase 07A completion
+**Updated:** Phase 07A COMPLETE — Customer Web (10 pages) + Admin Web (8 pages) with full API integration
 
 ---
 
 ## Current Phase
 
-**Phase 06 — Human-in-the-Loop: COMPLETE**
+**Phase 07A — Customer Web & Admin Web: COMPLETE**
 
-Phase 06 is fully implemented. 424 tests pass with zero regressions.
-Key deliverables: ApprovalTask model with 5 approval types, Migration 007, Admin approval API (list/approve/reject/execute) with CUSTOMER self-view, Agent orchestrator approval gate before graph execution, optimistic locking for concurrent decisions, payload integrity (DB-stored, not client-submitted), audit logging, 35 new tests.
-Next phase: Phase 07 — Frontend (not started).
+Phase 07 is fully implemented across 07A and 07B. All three frontends build successfully.
+Key deliverables: Customer Web (13 routes, Next.js 14), Admin Web (9 routes, Next.js 14), WeChat Mini Program (12 pages, native TypeScript). All use real backend API via unified client with auth + token refresh. Citations, proposed actions, approval status, tool logs, and traces clearly visible. .env.example provided, .gitignore protects secrets.
+Next phase: Phase 08 — Evaluation & Observability (not started).
 
 ---
 

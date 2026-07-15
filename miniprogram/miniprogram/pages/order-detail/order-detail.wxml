@@ -1,0 +1,25 @@
+<view class="container">
+  <block wx:if="{{loading}}"><view class="loading-text">加载中...</view></block>
+  <block wx:elif="{{order}}">
+    <view class="card">
+      <view class="flex-between">
+        <text style="font-weight:bold">订单 {{order.order_number}}</text>
+        <text class="badge badge-blue">{{statusText[order.status] || order.status}}</text>
+      </view>
+      <view class="text-sm text-gray mt-2">总额: ¥{{order.total_amount}} | 运费: ¥{{order.shipping_fee}}</view>
+      <view class="text-sm text-gray">支付: {{order.paid_at || '-'}} | 发货: {{order.shipped_at || '-'}} | 签收: {{order.delivered_at || '-'}}</view>
+    </view>
+    <view class="card" wx:if="{{order.items.length}}">
+      <view style="font-weight:600;margin-bottom:12rpx">商品明细</view>
+      <view wx:for="{{order.items}}" wx:key="id" class="flex-between" style="padding:8rpx 0;border-bottom:1rpx solid #f3f4f6">
+        <text>{{item.product_name}} x{{item.quantity}}</text>
+        <text>¥{{item.unit_price}}</text>
+      </view>
+    </view>
+    <view class="card" wx:if="{{logistics}}">
+      <view style="font-weight:600;margin-bottom:12rpx">物流信息</view>
+      <view class="text-sm">{{logistics.carrier}}: {{logistics.tracking_number}}</view>
+      <view class="text-sm text-gray">状态: {{logistics.status}}</view>
+    </view>
+  </block>
+</view>

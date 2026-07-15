@@ -1,0 +1,9 @@
+<view class="container">
+  <view class="card" style="text-align:center">
+    <view style="font-size:60rpx;margin-bottom:16rpx">👤</view>
+    <view style="font-size:32rpx;font-weight:bold">{{user.full_name}}</view>
+    <view class="text-sm text-gray mt-2">{{user.email}}</view>
+    <view class="text-sm text-gray">角色: {{user.role}}</view>
+  </view>
+  <button bindtap="logout" class="btn btn-danger" style="margin-top:40rpx">退出登录</button>
+</view>
