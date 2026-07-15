@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "deny": [
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(git clean -fd:*)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(git reset --hard *)",
+      "Bash(git clean -fd *)"
+    ]
+  },
+  "hooks": {},
+  "env": {},
+  "skipReading": [
+    ".env",
+    ".env.*",
+    "*.secret",
+    "*secret*",
+    "*credentials*",
+    "*.pem",
+    "*.key",
+    "*.token"
+  ]
+}
