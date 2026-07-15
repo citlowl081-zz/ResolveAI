@@ -35,7 +35,7 @@ def _get_service(db: AsyncSession) -> PolicyService:
     eng = _create(
         settings.resolved_database_url, pool_size=2, max_overflow=2, pool_pre_ping=True,
     )
-    factory = async_sessionmaker(eng, class_=AsyncSession, expire_on_commit=False)  # type: ignore[call-overload]
+    factory = async_sessionmaker(eng, class_=AsyncSession, expire_on_commit=False)
     provider = build_embedding_provider()
     return PolicyService(session_factory=factory, embedding_provider=provider)
 

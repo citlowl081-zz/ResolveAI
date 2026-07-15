@@ -113,7 +113,7 @@ class PolicyService:
             if status == "ACTIVE":
                 active = await repo.get_active(policy_key)
                 if active is not None and active.id != doc.id:
-                    active.status = PolicyStatus.SUPERSEDED  # type: ignore[assignment]
+                    active.status = PolicyStatus.SUPERSEDED
                     active.superseded_by = doc.id
 
             audit = AuditService(session)
@@ -229,11 +229,11 @@ class PolicyService:
                 # to avoid partial unique index violation
                 active = await repo.get_active(policy_key)
                 if active is not None and active.id != doc.id:
-                    active.status = PolicyStatus.SUPERSEDED  # type: ignore[assignment]
+                    active.status = PolicyStatus.SUPERSEDED
                     active.superseded_by = doc.id
                     await session.flush()
 
-            doc.status = PolicyStatus(new_status)  # type: ignore[assignment]
+            doc.status = PolicyStatus(new_status)
 
             audit = AuditService(session)
             await audit.log(

@@ -164,9 +164,9 @@ class PolicyIngestionService:
                     # Supersede old ACTIVE
                     active = await repo.get_active(doc_data["policy_key"])
                     if active is not None:
-                        active.status = PolicyStatus.SUPERSEDED  # type: ignore[assignment]
+                        active.status = PolicyStatus.SUPERSEDED
                         active.superseded_by = doc.id
-                    doc.status = PolicyStatus.ACTIVE  # type: ignore[assignment]
+                    doc.status = PolicyStatus.ACTIVE
                     status = "ACTIVE"
 
             return {
