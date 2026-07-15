@@ -56,6 +56,19 @@ def _extract_bigrams(text: str) -> list[str]:
     return bigrams
 
 
+def _extract_unigrams(text: str) -> list[str]:
+    """Extract single-character unigrams with position-weighted sentinels.
+
+    Adds a position-independent unigram for each unique character, plus
+    frequency-weighted duplicates for repeated chars to amplify common
+    characters.
+    """
+    chars = list(text)
+    if not chars:
+        return []
+    return [f"_{c}" for c in chars]
+
+
 # ---------------------------------------------------------------------------
 # BLAKE2b-based feature hashing
 # ---------------------------------------------------------------------------
@@ -75,15 +88,23 @@ def _bigram_hash_vector(text: str, dimension: int) -> list[float]:
     """
     normalized = _normalize(text)
     bigrams = _extract_bigrams(normalized)
+    unigrams = _extract_unigrams(normalized)
 
     vec = [0.0] * dimension
-    if not bigrams:
+    if not bigrams and not unigrams:
         return vec  # zero vector for empty text
 
+    # Bigrams: weight 2.0 for structural context
     for bg in bigrams:
         digest = hashlib.blake2b(bg.encode("utf-8"), digest_size=8).digest()
         idx = int.from_bytes(digest, "big") % dimension
-        vec[idx] += 1.0
+        vec[idx] += 2.0
+
+    # Unigrams: weight 0.5 for keyword presence
+    for ug in unigrams:
+        digest = hashlib.blake2b(ug.encode("utf-8"), digest_size=8).digest()
+        idx = int.from_bytes(digest, "big") % dimension
+        vec[idx] += 0.5
 
     # L2-normalise
     norm = math.sqrt(sum(v * v for v in vec))

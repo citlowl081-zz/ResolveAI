@@ -16,6 +16,7 @@ from .get_logistics import GetLogisticsTool
 from .get_order import GetOrderTool
 from .list_after_sales_tickets import ListAfterSalesTicketsTool
 from .list_orders import ListOrdersTool
+from .search_after_sales_policy import SearchAfterSalesPolicyTool
 
 
 def register_all(registry: ToolRegistry) -> None:
@@ -35,5 +36,6 @@ def register_all(registry: ToolRegistry) -> None:
     registry.register(ListAfterSalesTicketsTool())
     registry.register(CreateAfterSalesTicketTool())
     registry.register(CancelAfterSalesTicketTool())
+    registry.register(SearchAfterSalesPolicyTool())
 
     set_registry(registry)

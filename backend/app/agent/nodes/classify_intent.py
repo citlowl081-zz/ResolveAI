@@ -49,6 +49,8 @@ async def classify_intent(state: AgentState) -> AgentState:
                             "Classify the user's message into one of these intents: "
                             "LOGISTICS_INQUIRY, PRE_SHIP_REFUND, QUALITY_REFUND, "
                             "EXCHANGE, MISSING_PARTS, OTHER. "
+                            "For after-sales issues, suggest searching the policy "
+                            "knowledge base via search_after_sales_policy tool. "
                             "Provide confidence (0.0-1.0) and any extracted entities "
                             "(order_id, ticket_id, product_ref)."
                         ),

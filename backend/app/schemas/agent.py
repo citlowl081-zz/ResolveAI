@@ -42,10 +42,20 @@ class AgentMessageResponse(BaseModel):
     created_at: str | None = None
 
 
+class Citation(BaseModel):
+    policy_key: str
+    version: int
+    title: str
+    category: str
+    snippet: str
+    similarity_score: float
+
+
 class AgentTurnResponse(BaseModel):
     session_id: str
     messages: list[AgentMessageResponse] = []
     proposed_actions: list[ProposedActionResponse] = []
+    citations: list[Citation] = []
     trace_id: str
 
 

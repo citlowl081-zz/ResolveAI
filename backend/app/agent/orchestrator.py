@@ -143,6 +143,7 @@ class AgentOrchestrator:
             "terminal_error_code": None,
             "terminal_error_message": None,
             "node_timings": [],
+            "citations": [],
             "_pending_action_for_snapshot": None,
         }
 
@@ -271,6 +272,7 @@ class AgentOrchestrator:
             "session_id": state["session_id"],
             "messages": state.get("context_messages", []),
             "proposed_actions": state.get("proposed_actions") or [],
+            "citations": state.get("citations") or [],
             "trace_id": state["trace_id"],
         }
 

@@ -1,18 +1,20 @@
 # ResolveAI — Current Handoff
 
-**Date:** 2026-07-14
-**Generated:** After Phase 03 completion and CI verification
-**Updated:** Phase 04A Batch 1 complete — enums, validation, settings, models, migration 005
+**Date:** 2026-07-15
+**Generated:** After Phase 04 completion
+**Updated:** Phase 04 COMPLETE — 04A (KB + retrieval + ingestion + admin API), 04B (agent tool + citations + eval), 04C (PDF/DOCX upload)
 
 ---
 
 ## Current Phase
 
-**Phase 04A — Policy Knowledge Base: Batch 1 COMPLETE**
+**Phase 04 — RAG Knowledge Base: COMPLETE**
 
 Phase 03 — Agent Tools: COMPLETE
 
-Phase 04 implementation plan approved (revision 4). Phase 04A Batch 1 is complete: Python enums (PolicyCategory, PolicyStatus), policy_key validation, embedding settings, SQLAlchemy models (PolicyDocument, PolicyChunk), migration 005. 204 tests pass (155 old + 49 new). Phase 04A remaining batches, 04B, and 04C have NOT started.
+Phase 04 is fully implemented across 04A, 04B, and 04C. 312 tests pass with zero regressions.
+Key deliverables: pgvector policy retrieval, Chinese-friendly chunking, embedding providers (mock + OpenAI-compatible), Admin Policy API (8 endpoints), Agent RAG tool with structured citations, RAG evaluation (HitRate@5=0.952, MRR=0.775), PDF/DOCX upload support.
+Next phase: Phase 05 — Memory System (not started).
 
 ---
 

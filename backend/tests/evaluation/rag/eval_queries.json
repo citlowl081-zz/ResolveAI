@@ -1,0 +1,23 @@
+[
+  {"query": "我要退款", "expected": ["POL-REF-001", "POL-REF-002"]},
+  {"query": "未发货怎么退款", "expected": ["POL-REF-001"]},
+  {"query": "收到货发现有质量问题", "expected": ["POL-REF-002", "POL-REF-004"]},
+  {"query": "衣服买小了想换大一码", "expected": ["POL-EXC-001"]},
+  {"query": "包裹里少了一件商品", "expected": ["POL-RES-001"]},
+  {"query": "快递显示签收但我没收到", "expected": ["POL-LOG-001"]},
+  {"query": "退货流程是什么", "expected": ["POL-RET-001", "POL-REF-003"]},
+  {"query": "七天无理由退货怎么操作", "expected": ["POL-REF-003"]},
+  {"query": "用了优惠券退款能退多少", "expected": ["POL-REF-006"]},
+  {"query": "退款运费谁承担", "expected": ["POL-REF-007"]},
+  {"query": "超过1000元的退款怎么处理", "expected": ["POL-RISK-001"]},
+  {"query": "我退款次数太多会不会被限制", "expected": ["POL-RISK-002"]},
+  {"query": "转人工客服", "expected": ["POL-SOP-001"]},
+  {"query": "食品类买了能退吗", "expected": ["POL-REF-005"]},
+  {"query": "耳机坏了想退货", "expected": ["POL-REF-004"]},
+  {"query": "订单还没发货我想取消退款", "expected": ["POL-REF-001"]},
+  {"query": "收到的衣服破了", "expected": ["POL-RET-001", "POL-REF-002"]},
+  {"query": "换货怎么操作", "expected": ["POL-EXC-001"]},
+  {"query": "缺货补发要多久", "expected": ["POL-RES-001"]},
+  {"query": "快递丢了怎么赔", "expected": ["POL-LOG-001"]},
+  {"query": "退款到账要多久", "expected": ["POL-REF-001", "POL-REF-002"]}
+]

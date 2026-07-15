@@ -121,8 +121,9 @@ class PolicyChunkRepository(BaseRepository):
             if pk not in best or r["similarity_score"] > best[pk]["similarity_score"]:
                 best[pk] = dict(r)
 
-        # 3. Sort by score descending, take top_k
+        # 3. Deterministic sort: score descending, then policy_key, then chunk_index
         sorted_results = sorted(
-            best.values(), key=lambda d: d["similarity_score"], reverse=True
+            best.values(),
+            key=lambda d: (-d["similarity_score"], d["policy_key"], d["chunk_index"]),
         )
         return sorted_results[:top_k]

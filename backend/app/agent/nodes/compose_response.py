@@ -16,6 +16,9 @@ from app.llm.provider import ChatMessage, ChatRequest
 async def compose_response(state: AgentState) -> AgentState:
     state["current_node"] = "compose_response"
 
+    # ── Build citations from policy search tool results ──────────────
+    state["citations"] = _build_citations(state)
+
     # If injection was detected, return safe rejection
     if state.get("injection_detected"):
         state["response_text"] = "抱歉，您的消息中包含无法处理的指令。请以自然语言描述您的需求。"
@@ -267,6 +270,30 @@ def _terminal_error_message(code: str) -> str:
         "RESOURCE_NOT_FOUND": "未找到相关资源，请检查信息是否正确。",
     }
     return messages.get(code, "抱歉，处理请求时遇到问题，请稍后重试。")
+
+
+def _build_citations(state: AgentState) -> list[dict]:
+    """Build structured citation list from search_after_sales_policy results."""
+    results = state.get("tool_results") or []
+    for r in results:
+        if not r.get("is_success"):
+            continue
+        if r.get("tool_name") != "search_after_sales_policy":
+            continue
+        data = r.get("data") or {}
+        policies = data.get("policies") or []
+        citations = []
+        for p in policies:
+            citations.append({
+                "policy_key": p.get("policy_key", ""),
+                "version": p.get("version", 0),
+                "title": p.get("title", ""),
+                "category": p.get("category", ""),
+                "snippet": p.get("snippet", ""),
+                "similarity_score": p.get("similarity_score", 0.0),
+            })
+        return citations
+    return []
 
 
 def _get_order_context(state: AgentState) -> dict | None:

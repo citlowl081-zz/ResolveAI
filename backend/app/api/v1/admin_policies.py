@@ -3,7 +3,7 @@
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.config.settings import settings
@@ -186,5 +186,102 @@ async def ingest_policies(
     try:
         report = await ingester.ingest_all(activate=req.activate)
         return APIResponse(success=True, code="OK", data={"report": report})
+    finally:
+        await engine.dispose()
+
+
+# ── Upload (Phase 04C) ─────────────────────────────────────────────────
+
+
+_ALLOWED_EXTENSIONS = frozenset({".pdf", ".docx"})
+_ALLOWED_MIME = frozenset({
+    "application/pdf",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+})
+_MAX_UPLOAD_MB = 10
+
+
+@router.post("/upload", status_code=201)
+async def upload_policy(
+    file: UploadFile = File(...),
+    policy_key: str = Form(...),
+    title: str = Form(...),
+    category: str = Form(...),
+    effective_date: str = Form(...),
+    activate: bool = Form(False),
+    issue_types: str = Form(""),
+    content_summary: str = Form(""),
+    expiration_date: str = Form(""),
+    source: str = Form(""),
+    metadata_filter: str = Form("{}"),
+    db: AsyncSession = Depends(get_db),
+    admin: dict = Depends(require_role("ADMIN")),
+) -> APIResponse[dict]:
+    import json
+    from pathlib import Path as P
+
+    from app.rag.document_parser import DocumentParseError, parse_upload
+
+    # ── Validate extension ──────────────────────────────────────────
+    filename = file.filename or "unknown"
+    suffix = P(filename).suffix.lower()
+    name_only = P(filename).name
+    if ".." in name_only or "/" in name_only or "\\" in name_only:
+        return APIResponse(success=False, code="INVALID_FILENAME",
+                          message="文件名包含非法字符")
+    if suffix not in _ALLOWED_EXTENSIONS:
+        return APIResponse(success=False, code="UNSUPPORTED_FORMAT",
+                          message=f"不支持的文件格式 {suffix}，仅支持 PDF 和 DOCX")
+
+    # ── Validate size ───────────────────────────────────────────────
+    content = await file.read()
+    if len(content) == 0:
+        return APIResponse(success=False, code="EMPTY_FILE", message="上传的文件为空")
+    if len(content) > _MAX_UPLOAD_MB * 1024 * 1024:
+        return APIResponse(success=False, code="FILE_TOO_LARGE",
+                          message=f"文件超过最大限制 {_MAX_UPLOAD_MB}MB")
+
+    # ── Parse document ──────────────────────────────────────────────
+    try:
+        body_text = parse_upload(content, filename)
+    except DocumentParseError as exc:
+        return APIResponse(success=False, code="PARSE_ERROR", message=str(exc))
+
+    if not body_text.strip():
+        return APIResponse(success=False, code="EMPTY_BODY",
+                          message="文件中未提取到文本内容")
+
+    # ── Ingest via existing pipeline ────────────────────────────────
+    from sqlalchemy.ext.asyncio import create_async_engine
+
+    engine = create_async_engine(
+        settings.resolved_database_url, pool_size=2, max_overflow=2, pool_pre_ping=True,
+    )
+    factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    provider = build_embedding_provider()
+
+    try:
+        issue_list = json.loads(issue_types) if issue_types else []
+    except json.JSONDecodeError:
+        issue_list = []
+    try:
+        meta_filter = json.loads(metadata_filter) if metadata_filter else {}
+    except json.JSONDecodeError:
+        meta_filter = {}
+
+    svc = PolicyService(session_factory=factory, embedding_provider=provider)
+    try:
+        result = await svc.create_policy(
+            policy_key=policy_key, title=title, category=category,
+            content=body_text, effective_date=effective_date,  # type: ignore[arg-type]
+            issue_types=issue_list, content_summary=content_summary,
+            expiration_date=expiration_date or None,  # type: ignore[arg-type]
+            source=source, metadata_filter=meta_filter,
+            status="ACTIVE" if activate else "DRAFT",
+        )
+        return APIResponse(success=True, code="CREATED", data=result)
+    except Exception as exc:
+        return APIResponse(success=False, code="INGEST_FAILED",
+                          message=f"入库失败: {exc}")
     finally:
         await engine.dispose()

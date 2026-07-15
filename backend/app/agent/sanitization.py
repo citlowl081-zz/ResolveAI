@@ -69,6 +69,21 @@ def project_for_llm(tool_name: str, raw: dict) -> dict:
     return raw
 
 
+# Fields to KEEP when sending policy data to the LLM
+POLICY_LLM_FIELDS = frozenset({
+    "policy_key", "title", "category", "content_summary",
+    "snippet", "similarity_score", "version",
+})
+
+
+def project_policy_for_llm(policy: dict) -> dict:
+    """Strip internal fields (UUIDs, hashes, full content) from policy results."""
+    return {
+        k: v for k, v in policy.items()
+        if k in POLICY_LLM_FIELDS
+    }
+
+
 def strip_pii_from_dict(data: dict) -> dict:
     """Recursively remove PII fields from a dict for trace/tool_log storage."""
     if not isinstance(data, dict):

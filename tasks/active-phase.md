@@ -1,8 +1,9 @@
 # Active Phase
 
-**Current Phase:** Phase 04A — Policy Knowledge Base (Batch 1 COMPLETE)
+**Current Phase:** Phase 04 — RAG Knowledge Base (COMPLETE)
 
 **Previous Phase:** Phase 03 — Agent Tools (COMPLETE)
+**Next Phase:** Phase 05 — Memory System (Not started)
 
 ## Phase 03 Status: ✅ COMPLETE
 
@@ -39,31 +40,29 @@ ResolveAI/
 - [Phase 02 — Business Backend (Index)](phase-02-business-backend.md) ✅
 - [Phase 03 — Agent Tools](phase-03-agent-tools.md) ✅
 
-## Phase 04 Status: IN PROGRESS
+## Phase 04 Status: ✅ COMPLETE
 
 Phase 04 implementation plan approved (revision 4). See `tasks/phase-04-rag.md` for the complete plan.
 
-Phase 04 is split into:
-- **04A** — Policy Knowledge Base (data model, embeddings, chunking, ingestion, retrieval, admin API)
-- **04B** — Agent RAG Integration (tool, citations, evaluation) — **not started**
-- **04C** — PDF/DOCX Upload (optional, deferred) — **not started**
+### Phase 04A — Policy Knowledge Base ✅
+- Data model: PolicyDocument (policy_key + version), PolicyChunk (vector(1536)), Migration 005
+- Embedding: EmbeddingProvider ABC, MockEmbeddingProvider (BLAKE2b unigram+bigram), OpenAICompatibleEmbeddingProvider (httpx)
+- Chunking: Chinese-friendly sentence-boundary, content_hash, 3-phase ingestion with advisory locks
+- Retrieval: pgvector exact cosine, category/status/date in SQL, dedup per policy_key
+- Admin API: 7 CRUD endpoints + 1 upload endpoint (PDF/DOCX), 14 seed policies
+- 298 tests at 04A completion
 
-### Phase 04A Batch 1 — COMPLETE
-- Python enums: PolicyCategory, PolicyStatus with `from_prefix()` lookup
-- policy_key validation: `validate_policy_key()`, `validate_policy_key_and_category()` in `app/rag/validation.py`
-- Settings: embedding config (OpenAI-compatible `EMBEDDING_PROVIDER/MODEL/API_KEY/BASE_URL/DIMENSION/TIMEOUT_SECONDS/MAX_RETRIES` + `RAG_TOP_K` + `RAG_MIN_SIMILARITY`)
-- SQLAlchemy models: PolicyDocument (policy_key + version keyed), PolicyChunk (vector(1536))
-- Migration 005: policy_documents + policy_chunks tables with all constraints and indexes
-- Tests: 49 new (20 unit + 13 integration model constraints). Total: 204 passed. Zero regressions.
+### Phase 04B — Agent RAG Integration ✅
+- `search_after_sales_policy` Agent tool (CUSTOMER only), 9-node graph unchanged
+- Structured citations from real tool_results, LLM data minimization
+- RAG eval: 21 queries, HitRate@5=0.952, Precision@1=0.667, MRR=0.775, zero fabrication
+- 312 tests at 04B completion
 
-### Phase 04A Remaining
-- Batch 2: Embedding providers (ABC, Mock, OpenAI-compatible), chunking, content_hash
-- Batch 3: Repositories, retrieval (exact cosine search)
-- Batch 4: PolicyService, ingestion, admin API
-- Batch 5: Policy data files (14 markdown policies)
-
-**Phase 04A is NOT complete.** Phase 04B and 04C have NOT started.
+### Phase 04C — PDF/DOCX Upload ✅
+- PDF (pypdf) and DOCX (python-docx) parsing, upload endpoint with size/MIME/extension validation
+- Path traversal prevention, controlled error messages, reuses existing ingestion pipeline
+- 312 tests total (Phase 04C adds infrastructure, no standalone eval test file)
 
 ## Next Step
 
-Phase 04A Batch 2: EmbeddingProvider ABC, MockEmbeddingProvider (BLAKE2b bigram), OpenAICompatibleEmbeddingProvider (httpx), Chinese-friendly chunking, content_hash function.
+Phase 05 — Memory System (Not started). Do NOT begin until Phase 04 is fully closed (commit + push + CI green).
