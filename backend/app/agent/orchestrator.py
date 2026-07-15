@@ -103,6 +103,19 @@ class AgentOrchestrator:
         pending_action = preflight_result.get("pending_action")
         pending_action_valid = preflight_result.get("pending_action_valid", False)
 
+        # ── Approval gate (Phase 06) ──────────────────────────────────
+        if pending_action_valid and pending_action is not None:
+            approval_needed = await self._check_approval_needed(
+                user_id, session_id_val, turn_id, pending_action,
+            )
+            if approval_needed:
+                # Release turn, return PENDING_APPROVAL — do NOT run graph
+                async with self.session_factory() as cleanup_session:
+                    repo = AgentSessionRepository(cleanup_session)
+                    await repo.clear_active_turn(session_id_val, turn_id)
+                    await cleanup_session.commit()
+                return approval_needed
+
         # ── Build initial state ─────────────────────────────────────
         initial_state: AgentState = {
             "user_message": user_message,
@@ -600,3 +613,210 @@ class AgentOrchestrator:
             await sess_repo.clear_active_turn(session_id, turn_id)
 
             await session.commit()
+
+    # ── Approval gate (Phase 06) ──────────────────────────────────────
+
+    async def _check_approval_needed(
+        self,
+        user_id: uuid.UUID,
+        session_id: uuid.UUID,
+        turn_id: uuid.UUID,
+        pending_action: dict,
+    ) -> dict | None:
+        """Check whether the confirmed action requires human approval.
+
+        Returns a PENDING_APPROVAL response dict if approval is needed,
+        or None if the action can proceed directly.
+        """
+        from decimal import Decimal
+
+        from app.rules.approval_triggers import check_approval_required
+        from app.services.approval_service import ApprovalService
+
+        tool_name = pending_action.get("tool_name", "")
+        canonical_input = pending_action.get("canonical_tool_input", {})
+        action_id = pending_action.get("action_id", "")
+        intent = canonical_input.get("intent", "OTHER")
+        items = canonical_input.get("requested_items", [])
+
+        # Only check for write tools
+        if tool_name != "create_after_sales_ticket":
+            return None
+
+        # Determine risk level and refund estimate from user/order context
+        async with self.session_factory() as session:
+            from sqlalchemy import select
+
+            from app.models.user import User
+            user_result = await session.execute(select(User).where(User.id == user_id))
+            user = user_result.scalar_one_or_none()
+            risk_level = user.risk_level.value if user and hasattr(user.risk_level, "value") else "LOW"
+
+            # Estimate refund from requested items
+            estimated = Decimal("0")
+            if items:
+                try:
+                    from app.models.order_item import OrderItem
+                    item_ids = [uuid.UUID(i["order_item_id"]) for i in items if i.get("order_item_id")]
+                    if item_ids:
+                        oi_result = await session.execute(
+                            select(OrderItem).where(OrderItem.id.in_(item_ids))
+                        )
+                        oi_map = {str(oi.id): oi for oi in oi_result.scalars().all()}
+                        for item in items:
+                            oi = oi_map.get(str(item.get("order_item_id", "")))
+                            if oi is not None:
+                                estimated += (oi.unit_price or Decimal("0")) * int(item.get("quantity", 1))
+                except Exception:
+                    pass
+
+            # Load threshold from configs
+            from app.models.system_config import SystemConfig
+            config_result = await session.execute(select(SystemConfig))
+            configs = {c.config_key: c.config_value for c in config_result.scalars().all()}
+            raw_threshold = configs.get("high_refund_threshold", "1000.00")
+            threshold = Decimal(str(raw_threshold)) if not isinstance(raw_threshold, dict) else Decimal("1000.00")
+
+            await session.commit()
+
+        # Run approval trigger check
+        triggers = check_approval_required(
+            intent=intent,
+            estimated_refund=estimated,
+            high_refund_threshold=threshold,
+            risk_level=risk_level,
+            item_count=len(items),
+        )
+
+        if not triggers:
+            return None  # No approval needed
+
+        # Create approval task in a separate TX
+        async with self.session_factory() as session:
+            approval_service = ApprovalService(session)
+            reason = f"Approval triggers: {', '.join(triggers)}; "
+            reason += f"Estimated refund: {estimated}; Risk: {risk_level}; Items: {len(items)}"
+
+            task = await approval_service.create_approval(
+                user_id=user_id,
+                agent_session_id=session_id,
+                turn_id=turn_id,
+                action_id=action_id,
+                tool_name=tool_name,
+                action_payload=canonical_input,
+                approval_types=triggers,
+                risk_level=risk_level,
+                reason=reason,
+            )
+            await session.commit()
+
+            return {
+                "session_id": str(session_id),
+                "status": "PENDING_APPROVAL",
+                "approval": {
+                    "id": str(task.id),
+                    "action_id": action_id,
+                    "tool_name": tool_name,
+                    "approval_type": task.approval_type.value if hasattr(task.approval_type, "value") else str(task.approval_type),
+                    "status": "PENDING",
+                    "reason": reason,
+                    "expires_at": task.expires_at.isoformat() if task.expires_at else None,
+                },
+                "message": "您的高风险操作需要人工审核，请耐心等待。",
+            }
+
+    async def execute_approved_action(
+        self,
+        approval_task_id: uuid.UUID,
+        executed_by: uuid.UUID,
+    ) -> dict:
+        """Execute the business action after an approval is granted.
+
+        Called by the admin execute endpoint. Loads the stored payload,
+        re-runs the tool with idempotency protection, writes tool_log + trace.
+        """
+        from app.services.approval_service import ApprovalService
+
+        async with self.session_factory() as session:
+            approval_service = ApprovalService(session)
+            task = await approval_service.get_task(approval_task_id)
+
+            # Validate state
+            status = task.status.value if hasattr(task.status, "value") else str(task.status)
+            if status != "APPROVED":
+                from app.exceptions import ConflictError
+                raise ConflictError(f"Cannot execute task with status {status}. Must be APPROVED.")
+
+            payload = task.sanitized_action_payload or {}
+            intent = payload.get("intent", "")
+            items = payload.get("requested_items", [])
+            order_id = payload.get("order_id", "")
+            user_id = task.user_id
+
+            if not order_id or not items:
+                from app.exceptions import ValidationError
+                raise ValidationError("Approval task payload is missing required fields")
+
+            # Execute the tool (tool-level idempotency prevents duplicate execution)
+            from app.services.ticket import TicketService
+            ticket_service = TicketService(session)
+
+            result = await ticket_service.create_ticket(
+                user_id=user_id,
+                order_id=uuid.UUID(order_id),
+                intent=intent,
+                requested_items=items,
+                customer_request=payload.get("customer_request", ""),
+                user_agent="admin-approval",
+            )
+            await session.commit()
+
+            # Write tool log
+            turn_id = task.turn_id or uuid.uuid4()
+            trace_id = uuid.uuid4()
+            from app.agent.sanitization import strip_pii_from_dict
+            from app.models.agent_tool_log import AgentToolLog
+
+            log = AgentToolLog(
+                session_id=task.agent_session_id or uuid.uuid4(),
+                turn_id=turn_id,
+                message_id=uuid.uuid4(),
+                trace_id=trace_id,
+                tool_call_id=task.action_id,
+                tool_name=task.tool_name,
+                tool_input=strip_pii_from_dict(payload),
+                tool_output=strip_pii_from_dict(result),
+                is_success=True,
+                duration_ms=0,
+                retry_count=0,
+            )
+            session.add(log)
+
+            # Write audit log
+            from app.services.audit import AuditService
+            audit = AuditService(session)
+            await audit.log(
+                user_id=executed_by,
+                action="APPROVAL_EXECUTED",
+                resource_type="approval_task",
+                resource_id=approval_task_id,
+                changes={
+                    "ticket_result": {
+                        "ticket_number": result.get("ticket_number", ""),
+                        "status": result.get("status", ""),
+                    },
+                },
+            )
+
+            await session.commit()
+
+            return {
+                "approval_id": str(approval_task_id),
+                "action_id": task.action_id,
+                "tool_name": task.tool_name,
+                "executed_by": str(executed_by),
+                "ticket_result": {
+                    "ticket_number": result.get("ticket_number", ""),
+                    "status": result.get("status", ""),
+                },
+            }

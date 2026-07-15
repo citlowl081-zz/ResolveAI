@@ -168,3 +168,27 @@ class MemoryStatus(enum.StrEnum):
     ACTIVE = "ACTIVE"
     ARCHIVED = "ARCHIVED"
     SUPERSEDED = "SUPERSEDED"
+
+
+class ApprovalStatus(enum.StrEnum):
+    """Lifecycle of a human-approval task.
+
+    Terminal states: APPROVED, REJECTED, EXPIRED, CANCELLED.
+    Only PENDING approvals can be acted on.
+    """
+
+    PENDING = "PENDING"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+    EXPIRED = "EXPIRED"
+    CANCELLED = "CANCELLED"
+
+
+class ApprovalType(enum.StrEnum):
+    """Why this action requires human approval."""
+
+    HIGH_REFUND = "HIGH_REFUND"          # Refund exceeds configured threshold
+    RISK_HIT = "RISK_HIT"                # User risk level HIGH or risk rule matched
+    EXCHANGE = "EXCHANGE"                # Exchange always needs manual review
+    MULTI_ITEM = "MULTI_ITEM"            # Multiple items affected
+    MANUAL_REQUEST = "MANUAL_REQUEST"    # Explicitly requested by user or system

@@ -1,18 +1,18 @@
 # ResolveAI — Current Handoff
 
 **Date:** 2026-07-15
-**Generated:** After Phase 05 completion
-**Updated:** Phase 05 COMPLETE — Memory data model, CRUD API, Agent integration, privacy filter, audit logging
+**Generated:** After Phase 06 completion
+**Updated:** Phase 06 COMPLETE — Human approval system with risk-based escalation, optimistic locking, payload integrity
 
 ---
 
 ## Current Phase
 
-**Phase 05 — Memory System: COMPLETE**
+**Phase 06 — Human-in-the-Loop: COMPLETE**
 
-Phase 05 is fully implemented. 389 tests pass with zero regressions.
-Key deliverables: CustomerMemory model with 5 memory types, Migration 006, Memory CRUD API (5 customer-scoped endpoints), Agent build_context memory injection with LLM field projection, compose_response memory decision rules, sensitive info privacy filter, audit logging on all mutating operations.
-Next phase: Phase 06 — Human-in-the-Loop (not started).
+Phase 06 is fully implemented. 424 tests pass with zero regressions.
+Key deliverables: ApprovalTask model with 5 approval types, Migration 007, Admin approval API (list/approve/reject/execute) with CUSTOMER self-view, Agent orchestrator approval gate before graph execution, optimistic locking for concurrent decisions, payload integrity (DB-stored, not client-submitted), audit logging, 35 new tests.
+Next phase: Phase 07 — Frontend (not started).
 
 ---
 

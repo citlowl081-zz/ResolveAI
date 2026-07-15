@@ -6,10 +6,12 @@ from app.api.v1 import (
     admin,
     admin_after_sales,
     admin_agent,
+    admin_approvals,
     admin_policies,
     admin_reshipments,
     after_sales,
     agent,
+    approvals,
     auth,
     logistics,
     memories,
@@ -25,8 +27,10 @@ v1_router.include_router(logistics.router)
 v1_router.include_router(after_sales.router)
 v1_router.include_router(agent.router)
 v1_router.include_router(memories.router)
+v1_router.include_router(approvals.router)
 v1_router.include_router(admin.router)
 v1_router.include_router(admin_after_sales.router)
+v1_router.include_router(admin_approvals.router)
 v1_router.include_router(admin_reshipments.router)
 v1_router.include_router(admin_agent.router)
 v1_router.include_router(admin_policies.router)

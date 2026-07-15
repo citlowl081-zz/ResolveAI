@@ -1,9 +1,9 @@
 # Active Phase
 
-**Current Phase:** Phase 05 — Memory System (COMPLETE)
+**Current Phase:** Phase 06 — Human-in-the-Loop (COMPLETE)
 
-**Previous Phase:** Phase 04 — RAG Knowledge Base (COMPLETE)
-**Next Phase:** Phase 06 — Human-in-the-Loop (Not started)
+**Previous Phase:** Phase 05 — Memory System (COMPLETE)
+**Next Phase:** Phase 07 — Frontend (Not started)
 
 ## Phase 05 Status: ✅ COMPLETE
 
@@ -17,6 +17,19 @@
 - **Privacy:** Regex-based sensitive info detection (JWT, bank card, CN ID, API key, password, detailed address); content + structured_data checked before storage
 - **Tests:** 77 new tests (40 unit + 28 integration + 9 agent integration), 389 total (0 failures)
 - **Quality:** pip check PASS, ruff PASS, mypy PASS (188 source files, 0 errors), migration downgrade→upgrade PASS
+
+## Phase 06 Status: ✅ COMPLETE
+
+- **Data Model:** ApprovalTask (user_id, action_id UNIQUE, tool_name, sanitized_action_payload JSONB, approval_type, status, risk_level, reason, requested_by, decided_by, decision_reason, expires_at, version), ApprovalStatus enum (PENDING/APPROVED/REJECTED/EXPIRED/CANCELLED), ApprovalType enum (HIGH_REFUND/RISK_HIT/EXCHANGE/MULTI_ITEM/MANUAL_REQUEST)
+- **Migration:** 007 — approval_tasks table with indexes on user_id, status, (user_id+status), action_id UNIQUE, version CHECK ≥1, upgrade/downgrade cycle verified
+- **Repository:** ApprovalTaskRepository — CRUD, decide() with optimistic locking (version + status check), expire_pending()
+- **Service:** ApprovalService — idempotent create_approval(), approve()/reject() with state validation + optimistic locking, list_tasks()/list_user_tasks()
+- **Trigger Rules:** check_approval_required() — HIGH_REFUND (>threshold), RISK_HIT (HIGH risk_level), EXCHANGE (always), MULTI_ITEM (>1 item); threshold from system_configs
+- **Agent Integration:** Orchestrator.run() checks approval BEFORE graph execution; if triggers match → creates ApprovalTask, releases turn, returns PENDING_APPROVAL; execute_approved_action() re-runs tool from stored payload
+- **API:** Admin — GET/POST approve/POST reject/POST execute `/api/v1/admin/approvals` (OPERATOR/ADMIN); Customer — GET list/GET detail `/api/v1/approvals`; All decide endpoints require Idempotency-Key
+- **Payload Integrity:** execute endpoint loads sanitized_action_payload from DB — client cannot inject alternative payload
+- **9-node LangGraph preserved:** Approval check happens before graph invocation, not as a new node
+- **Tests:** 35 new tests (10 unit + 16 integration + 9 agent integration), 424 total (0 failures)
 
 ## Phase 03 Status: ✅ COMPLETE
 
@@ -78,4 +91,4 @@ Phase 04 implementation plan approved (revision 4). See `tasks/phase-04-rag.md` 
 
 ## Next Step
 
-Phase 06 — Human-in-the-Loop (Not started). Do NOT begin until Phase 05 is committed and pushed with CI green.
+Phase 07 — Frontend (Not started). Do NOT begin until Phase 06 is committed and pushed with CI green.
