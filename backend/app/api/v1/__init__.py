@@ -12,6 +12,7 @@ from app.api.v1 import (
     agent,
     auth,
     logistics,
+    memories,
     orders,
     products,
 )
@@ -23,6 +24,7 @@ v1_router.include_router(orders.router)
 v1_router.include_router(logistics.router)
 v1_router.include_router(after_sales.router)
 v1_router.include_router(agent.router)
+v1_router.include_router(memories.router)
 v1_router.include_router(admin.router)
 v1_router.include_router(admin_after_sales.router)
 v1_router.include_router(admin_reshipments.router)

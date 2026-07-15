@@ -1,7 +1,8 @@
-"""build_context node — load orders, tickets, recent messages for LLM context."""
+"""build_context node — load orders, tickets, recent messages, and user memories for LLM context."""
 
 import uuid
 
+from app.agent.sanitization import project_memory_for_llm
 from app.agent.state import AgentState
 from app.config.settings import settings
 from app.repositories.agent_message import AgentMessageRepository
@@ -27,6 +28,7 @@ async def build_context(state: AgentState) -> AgentState:
     recent_orders = []
     pending_tickets = []
     recent_messages = []
+    user_memories: list[dict] = []
 
     # Build context in a short read-only transaction
     async with factory() as session:
@@ -58,6 +60,23 @@ async def build_context(state: AgentState) -> AgentState:
         except Exception:
             recent_messages = []
 
+        # ── Load user memories (Phase 05) ────────────────────────────
+        try:
+            from app.services.memory_service import MemoryService
+            memory_service = MemoryService(session)
+            active_memories = await memory_service.get_active_for_context(user_id, limit=20)
+            user_memories = [
+                project_memory_for_llm({
+                    "memory_type": m.memory_type.value if m.memory_type else "",
+                    "key": m.key or "",
+                    "content": m.content,
+                    "confidence": m.confidence or 1.0,
+                })
+                for m in active_memories
+            ]
+        except Exception:
+            user_memories = []
+
         await session.commit()
 
     # ── In-memory: LLM data minimization + token budget truncation ──
@@ -88,10 +107,13 @@ async def build_context(state: AgentState) -> AgentState:
     state["context_messages"] = selected
     state["recent_orders"] = recent_orders
     state["pending_tickets"] = pending_tickets
+    state["user_memories"] = user_memories
+    state["memory_changes"] = None
     state["context"] = {
         "orders": recent_orders,
         "tickets": pending_tickets,
         "message_count": len(selected),
+        "memory_count": len(user_memories),
     }
 
     return state

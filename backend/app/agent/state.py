@@ -48,6 +48,10 @@ class AgentState(TypedDict):
     # ── Policy Citations (Phase 04B) ──
     citations: list[dict] | None
 
+    # ── User Memories (Phase 05) ──
+    user_memories: list[dict] | None
+    memory_changes: list[dict] | None   # Memories to write after compose_response
+
     # ── Control ──
     current_node: str
     loop_count: int

@@ -143,3 +143,28 @@ class PolicyStatus(enum.StrEnum):
     ACTIVE = "ACTIVE"
     SUPERSEDED = "SUPERSEDED"
     ARCHIVED = "ARCHIVED"
+
+
+class MemoryType(enum.StrEnum):
+    """Categories of long-term user memory.
+
+    Each type governs retention policy, merge strategy, and LLM visibility.
+    """
+
+    PREFERENCE = "PREFERENCE"        # Stable user preference (refund method, comms channel)
+    FACT = "FACT"                    # Explicit "remember this" fact
+    SUMMARY = "SUMMARY"              # Session / after-sales case summary
+    COMMITMENT = "COMMITMENT"        # Promise made to the user (follow-up, callback)
+    RISK_PROFILE = "RISK_PROFILE"    # Derived risk assessment
+
+
+class MemoryStatus(enum.StrEnum):
+    """Lifecycle status for a memory record.
+
+    Only ``ACTIVE`` memories are injected into the Agent context.
+    ``SUPERSEDED`` means a newer record replaced this one.
+    """
+
+    ACTIVE = "ACTIVE"
+    ARCHIVED = "ARCHIVED"
+    SUPERSEDED = "SUPERSEDED"

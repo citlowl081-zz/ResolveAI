@@ -84,6 +84,20 @@ def project_policy_for_llm(policy: dict) -> dict:
     }
 
 
+# Fields to KEEP when sending user memory data to the LLM
+MEMORY_LLM_FIELDS = frozenset({
+    "memory_type", "key", "content", "confidence",
+})
+
+
+def project_memory_for_llm(memory: dict) -> dict:
+    """Strip internal fields (UUIDs, status, timestamps) from memory records."""
+    return {
+        k: v for k, v in memory.items()
+        if k in MEMORY_LLM_FIELDS
+    }
+
+
 def strip_pii_from_dict(data: dict) -> dict:
     """Recursively remove PII fields from a dict for trace/tool_log storage."""
     if not isinstance(data, dict):

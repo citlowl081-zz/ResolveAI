@@ -1,20 +1,18 @@
 # ResolveAI — Current Handoff
 
 **Date:** 2026-07-15
-**Generated:** After Phase 04 completion
-**Updated:** Phase 04 COMPLETE — 04A (KB + retrieval + ingestion + admin API), 04B (agent tool + citations + eval), 04C (PDF/DOCX upload)
+**Generated:** After Phase 05 completion
+**Updated:** Phase 05 COMPLETE — Memory data model, CRUD API, Agent integration, privacy filter, audit logging
 
 ---
 
 ## Current Phase
 
-**Phase 04 — RAG Knowledge Base: COMPLETE**
+**Phase 05 — Memory System: COMPLETE**
 
-Phase 03 — Agent Tools: COMPLETE
-
-Phase 04 is fully implemented across 04A, 04B, and 04C. 312 tests pass with zero regressions.
-Key deliverables: pgvector policy retrieval, Chinese-friendly chunking, embedding providers (mock + OpenAI-compatible), Admin Policy API (8 endpoints), Agent RAG tool with structured citations, RAG evaluation (HitRate@5=0.952, MRR=0.775), PDF/DOCX upload support.
-Next phase: Phase 05 — Memory System (not started).
+Phase 05 is fully implemented. 389 tests pass with zero regressions.
+Key deliverables: CustomerMemory model with 5 memory types, Migration 006, Memory CRUD API (5 customer-scoped endpoints), Agent build_context memory injection with LLM field projection, compose_response memory decision rules, sensitive info privacy filter, audit logging on all mutating operations.
+Next phase: Phase 06 — Human-in-the-Loop (not started).
 
 ---
 

@@ -1,9 +1,22 @@
 # Active Phase
 
-**Current Phase:** Phase 04 — RAG Knowledge Base (COMPLETE)
+**Current Phase:** Phase 05 — Memory System (COMPLETE)
 
-**Previous Phase:** Phase 03 — Agent Tools (COMPLETE)
-**Next Phase:** Phase 05 — Memory System (Not started)
+**Previous Phase:** Phase 04 — RAG Knowledge Base (COMPLETE)
+**Next Phase:** Phase 06 — Human-in-the-Loop (Not started)
+
+## Phase 05 Status: ✅ COMPLETE
+
+- **Data Model:** CustomerMemory (user_id, memory_type, key, content, structured_data, source, confidence, status, superseded_by, version), MemoryType enum (PREFERENCE/FACT/SUMMARY/COMMITMENT/RISK_PROFILE), MemoryStatus enum (ACTIVE/ARCHIVED/SUPERSEDED)
+- **Migration:** 006 — customer_memories table with partial unique index on (user_id, memory_type, key) WHERE status='ACTIVE', CASCADE on user delete, upgrade/downgrade cycle verified
+- **Repository:** CustomerMemoryRepository — CRUD, get_active_by_key (dedup), get_active_for_context (LLM injection), list_by_user (paginated + filtered)
+- **Service:** MemoryService — create/merge, get/list, update, delete; privacy filter (JWT/card/ID/API/password/address detection); audit logging on every mutating operation
+- **API:** 5 customer-scoped endpoints (POST/GET/GET{id}/PATCH/DELETE /api/v1/memories), CUSTOMER-only RBAC, user isolation, type/status filters
+- **Agent Integration:** build_context loads active memories with LLM field projection (memory_type/key/content/confidence only); compose_response evaluates memory writes at every return point
+- **Memory Decision Rules:** Explicit "记住"/"帮我记" → FACT, multi-keyword preferences in turn ≥2 → PREFERENCE, single preference in turn ≥3 → PREFERENCE, ticket resolution → SUMMARY; one-off inquiries/greetings rejected by should_not_save()
+- **Privacy:** Regex-based sensitive info detection (JWT, bank card, CN ID, API key, password, detailed address); content + structured_data checked before storage
+- **Tests:** 77 new tests (40 unit + 28 integration + 9 agent integration), 389 total (0 failures)
+- **Quality:** pip check PASS, ruff PASS, mypy PASS (188 source files, 0 errors), migration downgrade→upgrade PASS
 
 ## Phase 03 Status: ✅ COMPLETE
 
@@ -65,4 +78,4 @@ Phase 04 implementation plan approved (revision 4). See `tasks/phase-04-rag.md` 
 
 ## Next Step
 
-Phase 05 — Memory System (Not started). Do NOT begin until Phase 04 is fully closed (commit + push + CI green).
+Phase 06 — Human-in-the-Loop (Not started). Do NOT begin until Phase 05 is committed and pushed with CI green.

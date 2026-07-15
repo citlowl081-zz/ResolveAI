@@ -69,7 +69,7 @@ class TestCitationsBuiltFromToolResults:
 
     def test_build_citations_from_real_results(self) -> None:
         from app.agent.nodes.compose_response import _build_citations
-        state: dict = {  # type: ignore[no-redef]
+        state: dict = {
             "tool_results": [{
                 "is_success": True,
                 "tool_name": "search_after_sales_policy",

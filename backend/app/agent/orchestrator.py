@@ -144,6 +144,8 @@ class AgentOrchestrator:
             "terminal_error_message": None,
             "node_timings": [],
             "citations": [],
+            "user_memories": None,
+            "memory_changes": None,
             "_pending_action_for_snapshot": None,
         }
 
@@ -569,6 +571,23 @@ class AgentOrchestrator:
                     sess.context_snapshot = cs
 
                 sess.expires_at = datetime.now(UTC) + timedelta(hours=24)
+
+            # ── Persist memory changes (Phase 05) ────────────────────
+            memory_changes: list[dict] | None = state.get("memory_changes")
+            if memory_changes:
+                from contextlib import suppress
+
+                from app.services.memory_service import MemoryService
+                memory_service = MemoryService(session)
+                for mc in memory_changes:
+                    with suppress(Exception):
+                        await memory_service.create_memory(
+                            user_id=user_id,
+                            memory_type=mc["memory_type"],
+                            content=mc["content"],
+                            source=mc.get("source", "agent_inferred"),
+                            confidence=mc.get("confidence", 0.8),
+                        )
 
             # Complete idempotency + clear turn
             idem_service = IdempotencyService(session)

@@ -23,14 +23,14 @@ async def compose_response(state: AgentState) -> AgentState:
     if state.get("injection_detected"):
         state["response_text"] = "抱歉，您的消息中包含无法处理的指令。请以自然语言描述您的需求。"
         state["proposed_actions"] = []
-        return state
+        return _finalize_response(state)
 
     # If terminal error, return safe error message
     if state.get("terminal_error"):
         code: str = state.get("terminal_error_code") or "TOOL_EXECUTION_FAILED"
         state["response_text"] = _terminal_error_message(code)
         state["proposed_actions"] = []
-        return state
+        return _finalize_response(state)
 
     provider = get_provider()
 
@@ -78,12 +78,12 @@ async def compose_response(state: AgentState) -> AgentState:
                             state["proposed_actions"] = []
                     else:
                         state["proposed_actions"] = []
-                    return state
+                    return _finalize_response(state)
                 except (json.JSONDecodeError, KeyError):
                     # Non-JSON response — use content as-is
                     state["response_text"] = response.content or ""
                     state["proposed_actions"] = []
-                    return state
+                    return _finalize_response(state)
         except Exception:
             fallback_used = True
 
@@ -96,6 +96,12 @@ async def compose_response(state: AgentState) -> AgentState:
 
     # ── Template fallback ──────────────────────────────────────────
     _template_compose(state)
+    return _finalize_response(state)
+
+
+def _finalize_response(state: AgentState) -> AgentState:
+    """Evaluate memory writes and return state — called at every return point."""
+    state["memory_changes"] = _evaluate_memory_changes(state)
     return state
 
 
@@ -311,4 +317,47 @@ def _get_order_context(state: AgentState) -> dict | None:
             first = orders[0]
             if isinstance(first, dict):
                 return first
+    return None
+
+
+def _evaluate_memory_changes(state: AgentState) -> list[dict] | None:
+    """Evaluate whether this turn should trigger a memory write.
+
+    Uses the rules from memory_decisions.py.  Only applies for CUSTOMER users.
+    Never saves for ADMIN or OPERATOR roles.
+    """
+    if state.get("user_role") != "CUSTOMER":
+        return None
+
+    from app.agent.memory_decisions import should_not_save, should_save_memory
+
+    user_message = state.get("user_message", "")
+    response_text = state.get("response_text", "")
+    intent = state.get("intent")
+    tool_results = state.get("tool_results") or []
+
+    # Quick rejection: skip trivial/one-off messages
+    if should_not_save(user_message):
+        return None
+
+    # Estimate turn count from context messages
+    ctx_msgs = state.get("context_messages") or []
+    turn_count = max(1, len([m for m in ctx_msgs if m.get("role") == "USER"]))
+
+    do_save, mem_type, content = should_save_memory(
+        user_message=user_message,
+        response_text=response_text,
+        intent=intent,
+        tool_results=tool_results,
+        turn_count=turn_count,
+    )
+
+    if do_save and content:
+        return [{
+            "memory_type": mem_type,
+            "content": content,
+            "source": "agent_inferred",
+            "confidence": 0.8 if mem_type == "PREFERENCE" else 0.95,
+        }]
+
     return None
