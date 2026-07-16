@@ -4,11 +4,14 @@ Runs once at container startup after migrations and seed.
 """
 
 import asyncio
+import logging
 from pathlib import Path
 
 from app.database.session import _get_session_factory
 from app.rag.embeddings import build_embedding_provider
 from app.rag.ingestion import PolicyIngestionService
+
+logger = logging.getLogger(__name__)
 
 POLICIES_DIR = Path("/app/data/policies")
 FALLBACK_DIR = Path(__file__).resolve().parents[2] / "data" / "policies"
@@ -17,7 +20,7 @@ FALLBACK_DIR = Path(__file__).resolve().parents[2] / "data" / "policies"
 async def main() -> None:
     policies_dir = POLICIES_DIR if POLICIES_DIR.exists() else FALLBACK_DIR
     if not policies_dir.exists():
-        print(f"IngestPolicies: directory not found at {policies_dir}, skipping.")
+        logger.warning("IngestPolicies: directory not found at %s, skipping.", policies_dir)
         return
 
     factory = _get_session_factory()
@@ -29,7 +32,7 @@ async def main() -> None:
     )
     results = await ingester.ingest_all(activate=True)
     total = len(results)
-    print(f"IngestPolicies: {total} policy files processed")
+    logger.info("IngestPolicies: %d policy files processed", total)
 
 
 if __name__ == "__main__":
