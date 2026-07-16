@@ -1,9 +1,9 @@
 # Active Phase
 
-**Current Phase:** Phase 08 — Evaluation, Testing & Quality Hardening (COMPLETE)
+**Current Phase:** Phase 09 — Deployment, CI/CD & Portfolio Delivery (COMPLETE)
 
-**Previous Phase:** Phase 07 — Frontend (COMPLETE)
-**Next Phase:** Phase 09 — Deployment & CI/CD (Not started)
+**Previous Phase:** Phase 08 — Evaluation & Quality Hardening (COMPLETE)
+**Project Status:** ✅ READY FOR DEMO / PORTFOLIO
 
 ## Phase 05 Status: ✅ COMPLETE
 
@@ -138,7 +138,36 @@ Customer Web: 8 specs (login, register, home, agent, products, orders, approvals
 Admin Web: 7 specs (login, home, tickets, approvals, policies, traces, tool-logs)
 
 ### Quality Gates
-pip check PASS, ruff PASS (0 errors), mypy PASS (205 files, 0 errors), pytest PASS (467/467), migration cycle PASS, customer-web build PASS, admin-web build PASS
+pip check PASS, ruff PASS (0 errors), mypy PASS (205 files, 0 errors), pytest PASS (468/468), migration cycle PASS, customer-web build PASS, admin-web build PASS
+
+## Phase 09 Status: ✅ COMPLETE — Project READY FOR DEMO
+
+### Docker & Deployment
+- 3 Dockerfiles (multi-stage, non-root users)
+- docker-compose.yml (4 services, health checks, auto migration+seed)
+- .dockerignore (excludes venv, node_modules, .git)
+- .env.example with mock provider defaults
+
+### CI/CD (GitHub Actions)
+- Backend: ruff + mypy + pytest + migration cycle
+- Frontend: customer-web lint/build + admin-web lint/build
+- Docker: build all 3 images
+
+### Demo Data
+- Idempotent seed script with env-configured accounts
+- Customer: demo@example.com / demo123456
+- Admin: admin@example.com / admin123456
+
+### Documentation & Portfolio
+- Complete README with architecture and demo flow
+- Architecture diagrams in Mermaid (system, agent, RAG, HITL, ER, deploy)
+- Demo scripts (5-min walkthrough + 10-min technical deep-dive)
+- Deployment guide (Docker, Fly.io, Railway, AWS)
+- Resume materials (1-liner, 3 contributions, interview prep)
+- .env.example with mock defaults (zero API key setup)
+
+### Final Quality Gates
+pip check PASS · ruff PASS · mypy PASS (205 files) · pytest PASS (468/468) · migration PASS · customer-web build PASS · admin-web build PASS
 
 ## Phase 03 Status: ✅ COMPLETE
 
@@ -200,4 +229,4 @@ Phase 04 implementation plan approved (revision 4). See `tasks/phase-04-rag.md` 
 
 ## Next Step
 
-Phase 09 — Deployment & CI/CD (Not started). Do NOT begin until Phase 08 is committed and pushed with CI green.
+Project is READY FOR DEMO. All 9 phases complete. Next: commit, push, verify CI, and prepare for portfolio presentation.

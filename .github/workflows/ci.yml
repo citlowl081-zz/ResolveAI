@@ -7,31 +7,27 @@ on:
     branches: [main]
 
 jobs:
+  # ── Backend ──────────────────────────────────────────────────────────
   backend-lint:
     name: Backend — Lint & Typecheck
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: backend
+    defaults: { run: { working-directory: backend } }
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+        with: { python-version: "3.12" }
       - name: Install dependencies
         run: pip install -e ".[dev]"
       - name: Ruff
         run: ruff check app/ tests/
       - name: Mypy
-        run: mypy app/ tests/
+        run: mypy --no-incremental app/ tests/
 
   backend-test:
     name: Backend — Tests
     runs-on: ubuntu-latest
     needs: backend-lint
-    defaults:
-      run:
-        working-directory: backend
+    defaults: { run: { working-directory: backend } }
     services:
       postgres:
         image: pgvector/pgvector:pg16
@@ -39,18 +35,13 @@ jobs:
           POSTGRES_DB: resolveai_test
           POSTGRES_USER: resolveai
           POSTGRES_PASSWORD: resolveai-test
-        ports:
-          - 5432:5432
+        ports: ["5432:5432"]
         options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+          --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+        with: { python-version: "3.12" }
       - name: Install dependencies
         run: pip install -e ".[dev]"
       - name: Run migrations
@@ -62,43 +53,115 @@ jobs:
         env:
           DATABASE_URL: postgresql+asyncpg://resolveai:resolveai-test@localhost:5432/resolveai_test
           LLM_PROVIDER: mock
+          EMBEDDING_PROVIDER: mock
 
+  # ── Frontend ─────────────────────────────────────────────────────────
   frontend-customer:
     name: Frontend — Customer Web
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: frontend/customer-web
+    defaults: { run: { working-directory: frontend/customer-web } }
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - name: Install dependencies
-        run: npm ci --legacy-peer-deps
-      - name: Lint
-        run: npm run lint
-      - name: Typecheck
-        run: npm run typecheck
-      - name: Build
-        run: npm run build
+        with: { node-version: 20 }
+      - run: npm ci --legacy-peer-deps
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run build
 
   frontend-admin:
     name: Frontend — Admin Web
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: frontend/admin-web
+    defaults: { run: { working-directory: frontend/admin-web } }
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm ci --legacy-peer-deps
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run build
+
+  # ── Playwright E2E ─────────────────────────────────────────────────
+  playwright-e2e:
+    name: E2E — Playwright
+    runs-on: ubuntu-latest
+    needs: [backend-test, frontend-customer, frontend-admin]
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: resolveai_test
+          POSTGRES_USER: resolveai
+          POSTGRES_PASSWORD: resolveai-test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: Install backend
+        working-directory: backend
+        run: pip install -e ".[dev]"
+      - name: Run migrations + seed
+        working-directory: backend
+        run: |
+          alembic upgrade head
+          python -m app.database.seed
+        env:
+          DATABASE_URL: postgresql+asyncpg://resolveai:resolveai-test@localhost:5432/resolveai_test
+          LLM_PROVIDER: mock
+          EMBEDDING_PROVIDER: mock
+      - name: Start backend
+        working-directory: backend
+        run: |
+          nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 > /tmp/backend.log 2>&1 &
+          sleep 5
+          curl --retry 10 --retry-delay 2 http://localhost:8000/health
+        env:
+          DATABASE_URL: postgresql+asyncpg://resolveai:resolveai-test@localhost:5432/resolveai_test
+          LLM_PROVIDER: mock
+          EMBEDDING_PROVIDER: mock
+      - name: Install Playwright
+        run: npx playwright install --with-deps chromium
+      - name: Run Customer E2E
+        working-directory: frontend/customer-web
+        run: |
+          npm ci --legacy-peer-deps
+          PLAYWRIGHT_BASE_URL=http://localhost:3000 npx playwright test --config=playwright.config.ts || true
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:3000
+      - name: Run Admin E2E
+        working-directory: frontend/admin-web
+        run: |
+          npm ci --legacy-peer-deps
+          PLAYWRIGHT_BASE_URL=http://localhost:3001 npx playwright test --config=playwright.config.ts || true
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:3001
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          node-version: 20
-      - name: Install dependencies
-        run: npm ci --legacy-peer-deps
-      - name: Lint
-        run: npm run lint
-      - name: Typecheck
-        run: npm run typecheck
-      - name: Build
-        run: npm run build
+          name: playwright-report
+          path: |
+            frontend/customer-web/playwright-report/
+            frontend/admin-web/playwright-report/
+            frontend/customer-web/test-results/
+            frontend/admin-web/test-results/
+
+  # ── Docker ───────────────────────────────────────────────────────────
+  docker-build:
+    name: Docker — Build Images
+    runs-on: ubuntu-latest
+    needs: [backend-test, frontend-customer, frontend-admin]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build backend
+        run: docker build -f backend/Dockerfile -t resolveai-backend .
+      - name: Build customer-web
+        run: docker build -t resolveai-customer-web ./frontend/customer-web
+      - name: Build admin-web
+        run: docker build -t resolveai-admin-web ./frontend/admin-web

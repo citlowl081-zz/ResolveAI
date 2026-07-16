@@ -5,8 +5,8 @@
 FROM python:3.12-slim AS builder
 
 WORKDIR /build
-COPY pyproject.toml ./
-COPY app/ app/
+COPY backend/pyproject.toml ./
+COPY backend/app/ app/
 
 RUN pip install --no-cache-dir --prefix=/build/deps .
 
@@ -18,11 +18,12 @@ WORKDIR /app
 # Copy installed dependencies from builder
 COPY --from=builder /build/deps /usr/local
 
-# Copy application code
-COPY pyproject.toml ./
-COPY alembic.ini ./
-COPY alembic/ alembic/
-COPY app/ app/
+# Copy application code and policy data
+COPY backend/pyproject.toml ./
+COPY backend/alembic.ini ./
+COPY backend/alembic/ alembic/
+COPY backend/app/ app/
+COPY data/policies/ /app/data/policies/
 
 # Create non-root user
 RUN groupadd -r resolveai && useradd -r -g resolveai resolveai

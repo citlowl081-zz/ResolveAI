@@ -1,101 +1,225 @@
-# ResolveAI — 基于大模型的电商售后智能工单Agent
+# ResolveAI — AI-Powered E-Commerce After-Sales Agent
 
-**ResolveAI** is a full-stack demonstration project showcasing an AI-powered after-sales service agent for e-commerce. Built for AI Agent engineering job interviews, it integrates LLM-based natural language understanding, a deterministic rule engine, RAG-powered policy retrieval, a human approval workflow, and a complete business backend — all within a realistic simulated e-commerce environment.
+A full-stack demonstration of an LLM-based intelligent after-sales service agent built with LangGraph, FastAPI, PostgreSQL+pgvector, and Next.js. **Designed as a portfolio project for AI Agent engineering roles.**
 
-## What ResolveAI Does
+## What It Does
 
-Users can browse products, place orders, check logistics, and initiate after-sales requests by chatting with an AI agent in natural language. The agent understands intent, looks up real order data, retrieves applicable policies, calculates refunds deterministically, creates tickets, and escalates high-risk cases for human approval — all while maintaining audit trails and memory across sessions.
+A customer chats with an AI agent about an e-commerce order. The agent:
+1. **Classifies intent** (refund, exchange, logistics inquiry, etc.)
+2. **Looks up real data** — orders, logistics, after-sales policies via RAG
+3. **Evaluates eligibility** using a deterministic rule engine (not the LLM)
+4. **Retrieves policies** via pgvector semantic search with structured citations
+5. **Proposes actions** — refund, reshipment, exchange
+6. **Escalates high-risk cases** to human approval with pause/resume
+7. **Remembers preferences** across sessions via long-term memory
 
-## Key Features
+## Demo Flow (5-minute walkthrough)
 
-- **AI After-Sales Agent** — LangGraph state machine with explicit nodes for intent classification, eligibility checks, solution generation, and action execution.
-- **RAG Policy Knowledge Base** — pgvector-powered retrieval of after-sales policies with metadata filtering and versioning.
-- **Multi-Tier Memory** — Short-term session memory, long-term user preferences, and business state memory for cross-session continuity.
-- **Human Approval System** — Risk-based escalation with pause/resume for high-value refunds and sensitive operations.
-- **Complete Business Backend** — Users, products, orders, logistics, after-sales tickets, refunds, and reshipments with full audit logging.
-- **Observability** — Tool call logs, agent execution traces, and audit logs for every state-modifying operation.
-- **Security** — Role-based access control, idempotency keys, input validation, PII masking in logs, and Prompt injection detection.
-- **Evaluation Framework** — 50+ test cases with metrics for intent accuracy, tool selection, task completion, and safety.
+```
+Customer logs in → views orders → opens agent chat
+  → "I want a refund for these headphones"
+  → Agent classifies intent: QUALITY_REFUND
+  → Agent retrieves policy POL-REF-002 (citations shown)
+  → Agent proposes refund action
+  → Customer confirms
+  → High refund amount triggers approval (shown: PENDING_APPROVAL)
+  → Admin approves in admin dashboard
+  → Refund executed, audit logged
+
+Customer: "Remember I prefer Alipay for refunds"
+  → Memory stored (PREFERENCE type)
+  → Next session: preference loaded into context
+```
 
 ## Tech Stack
 
 | Layer | Technology |
 |---|---|
-| Backend | Python 3.12, FastAPI, SQLAlchemy 2, Pydantic 2 |
-| Agent | LangGraph (explicit state machine) |
+| Backend | Python 3.12, FastAPI, SQLAlchemy 2 (async), Pydantic 2 |
+| Agent | LangGraph (9-node state machine) |
+| LLM | Anthropic Claude (via provider abstraction, mock provider for dev) |
 | Database | PostgreSQL 16 + pgvector |
-| RAG | pgvector embeddings + hybrid retrieval |
-| Frontend (Customer) | Next.js 14, TypeScript, Tailwind CSS, shadcn/ui |
-| Frontend (Admin) | Next.js 14, TypeScript, Tailwind CSS, shadcn/ui |
-| Mini Program | WeChat Native Mini Program (planned) |
-| Testing | pytest, React Testing Library |
+| RAG | pgvector exact cosine similarity, Chinese-friendly chunking |
+| Frontend | Next.js 14, TypeScript, Tailwind CSS |
+| Mini Program | WeChat Native (TypeScript) |
+| Testing | pytest (468 tests), Playwright E2E (15 specs) |
 | Deployment | Docker, Docker Compose |
 
-## Quick Start
-
-> **Note:** This project is under active development. See `tasks/active-phase.md` for current status.
+## Quick Start (Local Demo)
 
 ```bash
-# Clone the repository
-git clone <repo-url>
-cd resolve-ai
+git clone <repo-url> && cd ResolveAI
 
-# Configure environment
-cp .env.example .env
-# Edit .env with your LLM API keys and database credentials
+# Start everything with one command (uses mock LLM, no API keys needed)
+docker compose up -d
 
-# Start all services
-make docker-up
+# Demo accounts (created by seed script):
+#   Customer: demo@example.com / demo123456
+#   Admin:    admin@example.com / admin123456
 
-# Or run individually:
-make dev-backend         # Backend on :8000
-make dev-frontend-customer  # Customer web on :3000
-make dev-frontend-admin     # Admin web on :3001
+# Open:
+#   Customer Web:  http://localhost:3000
+#   Admin Web:     http://localhost:3001
+#   Backend API:   http://localhost:8000/docs
 
-# Run tests
-make test
+# Stop:
+docker compose down
 ```
+
+## Architecture
+
+```
+┌──────────────┐  ┌──────────────┐  ┌─────────────────┐
+│ Customer Web │  │  Admin Web   │  │ WeChat Mini Prog │
+│  (Next.js)   │  │  (Next.js)   │  │   (Native TS)    │
+└──────┬───────┘  └──────┬───────┘  └────────┬────────┘
+       │                 │                    │
+       └─────────────────┼────────────────────┘
+                         │ REST API
+                 ┌───────┴────────┐
+                 │   FastAPI      │
+                 │  (Backend)     │
+                 └───────┬────────┘
+                         │
+        ┌────────────────┼────────────────┐
+        │                │                │
+   ┌────┴────┐    ┌──────┴──────┐   ┌────┴─────┐
+   │ LangGraph│    │  Services   │   │   RAG    │
+   │ 9 nodes  │    │ (12 classes)│   │ pgvector │
+   └────┬────┘    └──────┬──────┘   └────┬─────┘
+        │                │                │
+        └────────────────┼────────────────┘
+                         │
+                 ┌───────┴────────┐
+                 │  PostgreSQL 16 │
+                 │  + pgvector    │
+                 └────────────────┘
+```
+
+### LangGraph Agent Flow (9 nodes)
+
+```
+receive_message → load_session → build_context → classify_intent
+    → select_tools → authorize_tool → execute_tool
+        → (handle_tool_error) → compose_response
+```
+
+- **build_context:** Loads orders, tickets, messages, active memories
+- **classify_intent:** LLM-based intent classification with keyword fallback
+- **select_tools:** Maps intent to tool set (7 customer-facing tools)
+- **execute_tool:** Calls Phase 02 Services (never modifies DB directly)
+- **compose_response:** Generates response, builds citations, evaluates memory writes
+
+### Tool Calling (7 tools)
+
+`get_order`, `list_orders`, `get_logistics`, `get_after_sales_ticket`, `list_after_sales_tickets`, `create_after_sales_ticket`, `cancel_after_sales_ticket`, `search_after_sales_policy`
+
+Write tools use `pending_action → confirm_action_id` flow — LLM proposes, user confirms, server executes.
+
+### RAG Pipeline
+
+```
+Query → Embedding → pgvector <=> cosine search
+    → SQL filters (category, status, effective date)
+    → Dedup per policy_key → Deterministic sort
+    → Citations (policy_key + version + snippet, no UUIDs)
+```
+
+### Human-in-the-Loop Approval
+
+```
+User confirms → Approval check (refund > threshold? risk HIGH? exchange?)
+    → If triggers: create ApprovalTask, release turn, return PENDING_APPROVAL
+    → Admin approves/rejects → Execute stored payload
+    → Optimistic locking prevents double-approval
+    → Tool idempotency prevents double-execution
+```
+
+## API Endpoints (52 total)
+
+| Prefix | Count | Access |
+|---|---|---|
+| `/api/v1/auth` | 4 | Public |
+| `/api/v1/products` | 2 | Authenticated |
+| `/api/v1/orders` | 2 | CUSTOMER |
+| `/api/v1/logistics` | 1 | CUSTOMER |
+| `/api/v1/after-sales` | 6 | CUSTOMER |
+| `/api/v1/agent` | 6 | CUSTOMER |
+| `/api/v1/memories` | 5 | CUSTOMER |
+| `/api/v1/approvals` | 2 | CUSTOMER |
+| `/api/v1/admin/*` | 24 | OPERATOR/ADMIN |
 
 ## Project Structure
 
 ```
-resolve-ai/
-├── README.md               # This file
-├── AGENTS.md               # AI coding assistant rules
-├── CLAUDE.md               # Claude Code entry point
-├── CHANGELOG.md            # Version history
-├── .env.example            # Environment template
-├── docker-compose.yml      # Container orchestration
-├── Makefile                # Development commands
-├── backend/                # Python backend (FastAPI + LangGraph)
-├── frontend/               # Next.js frontends (customer + admin)
-├── miniprogram/            # WeChat Mini Program (planned Phase 07)
-├── docs/                   # Architecture & design documentation
-├── tasks/                  # Phase-based task tracking
-├── data/                   # Seed data, policies, evaluation cases
-├── scripts/                # Utility scripts
-└── reports/                # Progress reports
+ResolveAI/
+├── backend/              # Python FastAPI backend
+│   ├── app/
+│   │   ├── agent/         # LangGraph state machine
+│   │   ├── api/v1/        # 52 REST endpoints
+│   │   ├── models/        # SQLAlchemy models (20 tables)
+│   │   ├── repositories/  # Data access layer
+│   │   ├── services/      # Business logic (12 services)
+│   │   ├── rules/         # Deterministic rule engines
+│   │   ├── rag/           # Embedding, chunking, ingestion
+│   │   └── security/      # JWT, RBAC, password hashing
+│   ├── alembic/           # 7 migrations (001–007)
+│   └── tests/             # 468 tests (unit + integration + eval)
+├── frontend/
+│   ├── customer-web/      # Next.js 14 customer portal (13 routes)
+│   └── admin-web/         # Next.js 14 admin dashboard (9 routes)
+├── miniprogram/           # WeChat Mini Program (12 pages)
+├── docs/                  # Architecture & design documents
+├── tasks/                 # Phase-based implementation plans
+├── reports/               # Progress & evaluation reports
+└── data/policies/         # 14 after-sales policy documents
 ```
 
-## Documentation
+## Testing & Evaluation
 
-- [Project Overview](docs/00-project-overview.md)
-- [Requirements](docs/01-requirements.md)
-- [System Architecture](docs/02-system-architecture.md)
-- [Database Design](docs/03-database-design.md)
-- [API Contracts](docs/04-api-contracts.md)
-- [Agent Workflow](docs/05-agent-workflow.md)
-- [RAG Design](docs/06-rag-design.md)
-- [Memory Design](docs/07-memory-design.md)
-- [Security Design](docs/08-security-design.md)
-- [Testing Strategy](docs/09-testing-strategy.md)
-- [Deployment](docs/10-deployment.md)
-- [Demo Script](docs/11-demo-script.md)
+- **468 backend tests** (pytest, 0 failures)
+- **15 Playwright E2E specs** (all passing)
+- **RAG metrics:** HitRate@5=0.952, Precision@1=0.667, MRR=0.775, zero fabrication
+- **Memory:** Write Accuracy 1.000, False-Write Avoidance 0.833
+- **Security:** 14 RBAC/IDOR/PII tests passing
+- **Concurrency:** Idempotency, dedup, optimistic locking all verified
 
-## License
+## Key Design Decisions
 
-This project is for educational and demonstration purposes.
+1. **LLM never computes money** — refund amounts calculated by deterministic rule engine
+2. **LLM never bypasses approval** — high-risk operations always create ApprovalTask
+3. **No DB sessions during LLM/Embedding calls** — prevents connection leaks
+4. **Optimistic locking** on all mutating entities (version column)
+5. **Tool-level idempotency** via SHA256 hash, API-level via Idempotency-Key
+6. **Data minimization** for LLM — field allowlists, PII stripped before external calls
+7. **pgvector exact search** (no IVFFlat/HNSW) for deterministic retrieval results
 
-## Author
+## Environment Variables
 
-Developed as a portfolio project for AI Agent engineering roles.
+See [.env.example](.env.example) for all configuration options.
+Key settings:
+- `LLM_PROVIDER=mock` — no API key needed for local demo
+- `EMBEDDING_PROVIDER=mock` — no API key needed for local demo
+- `LLM_PROVIDER=anthropic` + `LLM_API_KEY` — use real Claude
+- `EMBEDDING_PROVIDER=openai` + `EMBEDDING_API_KEY` — use real embeddings
+
+## Known Limitations
+
+1. No real payment gateway (refunds are simulated)
+2. Mock LLM provider returns template responses (switch to `anthropic` for real LLM)
+3. No Redis/Kafka/microservices (by design, Phases 00–06)
+4. No WebSocket/SSE (agent uses sync HTTP request-response)
+5. WeChat Mini Program requires WeChat Developer Tools for local testing
+6. Not deployed to production cloud (Docker Compose for local demo)
+
+## Future Extensions
+
+- Real-time agent via WebSocket/SSE streaming
+- Multi-language support
+- Analytics dashboard with LLM cost tracking
+- A/B evaluation framework for prompt optimization
+- Cloud deployment (AWS ECS / Fly.io / Railway)
+
+## License & Author
+
+Educational/demonstration project. Developed as a portfolio for AI Agent engineering roles.

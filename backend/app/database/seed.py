@@ -1,15 +1,16 @@
-"""Idempotent seed script — safe to run multiple times.
+"""Demo seed script — idempotent, repeatable, safe for local demonstration.
 
-Creates test users, products, and sample orders.
-Uses ON CONFLICT DO NOTHING for idempotency.
+Creates demo accounts, products, orders, logistics, agent data.
+All data fictional. Passwords from DEMO_* env vars or safe demo defaults.
 """
 
 import asyncio
+import os
 import random
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
-from sqlalchemy import text
+from sqlalchemy import text as sa_text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.session import _get_session_factory
@@ -21,14 +22,17 @@ from app.models.product import Product
 from app.models.user import User
 from app.security.password import hash_password
 
-SEED_PASSWORD = hash_password("password123")
+_DEMO_CUST_EMAIL = os.getenv("DEMO_CUSTOMER_EMAIL", "demo@example.com")
+_DEMO_CUST_PASS = os.getenv("DEMO_CUSTOMER_PASSWORD", "demo123456")
+_DEMO_ADMIN_EMAIL = os.getenv("DEMO_ADMIN_EMAIL", "admin@example.com")
+_DEMO_ADMIN_PASS = os.getenv("DEMO_ADMIN_PASSWORD", "admin123456")
+
+CUST_HASH = hash_password(_DEMO_CUST_PASS)
+ADMIN_HASH = hash_password(_DEMO_ADMIN_PASS)
 
 USERS = [
-    {"email": "admin@test.com", "full_name": "Admin User", "role": "ADMIN"},
-    {"email": "operator@test.com", "full_name": "Operator User", "role": "OPERATOR"},
-    {"email": "customer@test.com", "full_name": "Alice Customer", "role": "CUSTOMER"},
-    {"email": "customer2@test.com", "full_name": "Bob Customer", "role": "CUSTOMER"},
-    {"email": "customer3@test.com", "full_name": "Carol Customer", "role": "CUSTOMER"},
+    {"email": _DEMO_ADMIN_EMAIL, "full_name": "Admin Demo", "role": "ADMIN", "pw": ADMIN_HASH},
+    {"email": _DEMO_CUST_EMAIL, "full_name": "Demo Customer", "role": "CUSTOMER", "pw": CUST_HASH},
 ]
 
 PRODUCTS = [
@@ -45,15 +49,14 @@ PRODUCTS = [
 ]
 
 
-async def seed_users(session: AsyncSession) -> dict[str, User]:
+async def seed_users(session: AsyncSession) -> dict:
     from sqlalchemy import select as sa_select
-    # Check existing
     result = await session.execute(sa_select(User))
     existing = {u.email: u for u in result.scalars().all()}
     for u_def in USERS:
         if u_def["email"] not in existing:
             user = User(
-                email=u_def["email"], hashed_password=SEED_PASSWORD,
+                email=u_def["email"], hashed_password=u_def["pw"],
                 full_name=u_def["full_name"], role=u_def["role"],
             )
             session.add(user)
@@ -77,139 +80,92 @@ async def seed_products(session: AsyncSession) -> list[Product]:
     return list(result.scalars().all())
 
 
-def _make_order_number(seq: int) -> str:
-    return f"ORD-{seq:06d}"
-
-
 async def seed_orders(session: AsyncSession, users: dict, products: list[Product]) -> None:
-    customer = users.get("customer@test.com")
+    customer = users.get(_DEMO_CUST_EMAIL)
     if customer is None:
         return
-
     product_map = {p.name: p for p in products}
 
-    # Order 1: PENDING_PAYMENT (headphones)
-    hp = product_map["Wireless Headphones"]
-    o1_exists = await session.execute(
-        text("SELECT 1 FROM orders WHERE order_number = 'ORD-000001'")
-    )
-    if o1_exists.scalar() is None:
-        o1 = Order(
-            user_id=customer.id, order_number="ORD-000001",
-            status=OrderStatus.PENDING_PAYMENT.value,
-            total_amount=hp.price * 2, shipping_address="北京市朝阳区测试路100号",
-            shipping_fee=Decimal("0"),
-            created_at=datetime.now(UTC) - timedelta(hours=2),
-        )
-        session.add(o1)
-        await session.flush()
-        session.add(OrderItem(
-            order_id=o1.id, product_id=hp.id, product_name=hp.name,
-            unit_price=hp.price, quantity=2, subtotal=hp.price * 2,
-        ))
-        await session.flush()
+    def _order_exists(num: str) -> bool:
+        return False  # unused; checked via order_number query below
 
-    # Order 2: PAID (shoes) — ready to ship
-    shoes = product_map["Running Shoes"]
-    o2_exists = await session.execute(
-        text("SELECT 1 FROM orders WHERE order_number = 'ORD-000002'")
-    )
-    if o2_exists.scalar() is None:
-        o2 = Order(
-            user_id=customer.id, order_number="ORD-000002",
-            status=OrderStatus.PAID.value,
-            total_amount=shoes.price, shipping_address="北京市朝阳区测试路100号",
-            shipping_fee=Decimal("0"), paid_amount=shoes.price,
-            paid_at=datetime.now(UTC) - timedelta(hours=1),
-            created_at=datetime.now(UTC) - timedelta(hours=3),
-        )
-        session.add(o2)
-        await session.flush()
-        session.add(OrderItem(
-            order_id=o2.id, product_id=shoes.id, product_name=shoes.name,
-            unit_price=shoes.price, quantity=1, subtotal=shoes.price,
-        ))
-        await session.flush()
+    orders_to_seed = [
+        ("ORD-000001", "Wireless Headphones", OrderStatus.DELIVERED.value, 2,
+         timedelta(days=5), timedelta(days=4), timedelta(days=3), timedelta(days=7)),
+        ("ORD-000002", "Running Shoes", OrderStatus.PAID.value, 1,
+         timedelta(hours=1), None, None, timedelta(hours=3)),
+        ("ORD-000003", "Desk Lamp LED", OrderStatus.SHIPPED.value, 1,
+         timedelta(days=1), timedelta(hours=12), None, timedelta(days=2)),
+    ]
 
-    # Order 3: SHIPPED (lamp)
-    lamp = product_map["Desk Lamp LED"]
-    o3_exists = await session.execute(
-        text("SELECT 1 FROM orders WHERE order_number = 'ORD-000003'")
-    )
-    if o3_exists.scalar() is None:
-        o3 = Order(
-            user_id=customer.id, order_number="ORD-000003",
-            status=OrderStatus.SHIPPED.value,
-            total_amount=lamp.price, shipping_address="北京市朝阳区测试路100号",
-            shipping_fee=Decimal("0"), paid_amount=lamp.price,
-            paid_at=datetime.now(UTC) - timedelta(days=1),
-            shipped_at=datetime.now(UTC) - timedelta(hours=12),
-            created_at=datetime.now(UTC) - timedelta(days=2),
+    for order_num, pname, status, qty, paid_delta, ship_delta, deliv_delta, create_delta in orders_to_seed:
+        exists = await session.execute(sa_text("SELECT 1 FROM orders WHERE order_number = :n"), {"n": order_num})
+        if exists.scalar() is not None:
+            continue
+        p = product_map[pname]
+        now = datetime.now(UTC)
+        o = Order(
+            user_id=customer.id, order_number=order_num, status=status,
+            total_amount=p.price * qty, shipping_address="Demo Address",
+            shipping_fee=Decimal("0"), paid_amount=p.price * qty,
+            paid_at=now - paid_delta,
+            shipped_at=now - ship_delta if ship_delta else None,
+            delivered_at=now - deliv_delta if deliv_delta else None,
+            created_at=now - create_delta,
         )
-        session.add(o3)
+        session.add(o)
         await session.flush()
-        session.add(OrderItem(
-            order_id=o3.id, product_id=lamp.id, product_name=lamp.name,
-            unit_price=lamp.price, quantity=1, subtotal=lamp.price,
-        ))
+        session.add(OrderItem(order_id=o.id, product_id=p.id, product_name=p.name, unit_price=p.price, quantity=qty, subtotal=p.price * qty))
         await session.flush()
-        tn = f"SF{random.randint(10000000000, 99999999999)}"
-        session.add(LogisticsRecord(
-            order_id=o3.id, tracking_number=tn, carrier="SF Express",
-            status=LogisticsStatus.IN_TRANSIT.value, current_location="Shanghai Distribution Center",
-            events=[{
-                "timestamp": (datetime.now(UTC) - timedelta(days=1)).isoformat(),
-                "status": "PICKED_UP", "location": "Beijing DC",
-                "description": "Package picked up",
-            }, {
-                "timestamp": (datetime.now(UTC) - timedelta(hours=12)).isoformat(),
-                "status": "IN_TRANSIT", "location": "Shanghai DC",
-                "description": "Package in transit",
-            }],
-        ))
-        await session.flush()
+        # Add logistics for shipped orders (idempotent by order_id)
+        if status == OrderStatus.SHIPPED.value:
+            log_exists = await session.execute(
+                sa_text("SELECT 1 FROM logistics_records WHERE order_id = :oid"), {"oid": o.id}
+            )
+            if log_exists.scalar() is None:
+                tn = f"SF{random.randint(10000000000, 99999999999)}"
+                session.add(LogisticsRecord(order_id=o.id, tracking_number=tn, carrier="SF Express", status=LogisticsStatus.IN_TRANSIT.value, current_location="Shanghai DC", events=[]))
+                await session.flush()
 
-    # Order 4: DELIVERED (snack)
-    snack = product_map["Organic Snack Box"]
-    o4_exists = await session.execute(
-        text("SELECT 1 FROM orders WHERE order_number = 'ORD-000004'")
-    )
-    if o4_exists.scalar() is None:
-        o4 = Order(
-            user_id=customer.id, order_number="ORD-000004",
-            status=OrderStatus.DELIVERED.value,
-            total_amount=snack.price * 3, shipping_address="北京市朝阳区测试路100号",
-            shipping_fee=Decimal("0"), paid_amount=snack.price * 3,
-            paid_at=datetime.now(UTC) - timedelta(days=5),
-            shipped_at=datetime.now(UTC) - timedelta(days=4),
-            delivered_at=datetime.now(UTC) - timedelta(days=3),
-            created_at=datetime.now(UTC) - timedelta(days=7),
-        )
-        session.add(o4)
-        await session.flush()
-        session.add(OrderItem(
-            order_id=o4.id, product_id=snack.id, product_name=snack.name,
-            unit_price=snack.price, quantity=3, subtotal=snack.price * 3,
-        ))
-        await session.flush()
+
+async def seed_agent_data(session: AsyncSession, users: dict) -> None:
+    """Create a demo agent session with messages for the demo customer."""
+    from app.models.agent_message import AgentMessage
+    from app.models.agent_session import AgentSession
+    from app.models.enums import MessageRole
+
+    customer = users.get(_DEMO_CUST_EMAIL)
+    if customer is None:
+        return
+    from sqlalchemy import select as sa_select
+    result = await session.execute(sa_select(AgentSession).where(AgentSession.user_id == customer.id))
+    if result.scalar_one_or_none() is not None:
+        return  # Already seeded
+
+    sess = AgentSession(user_id=customer.id, status="ACTIVE", message_count=2)
+    session.add(sess)
+    await session.flush()
+    session.add(AgentMessage(session_id=sess.id, turn_id=sess.id, role=MessageRole.USER.value, content="Hello, I want to check my order status.", sequence_number=1, turn_sequence=0))
+    session.add(AgentMessage(session_id=sess.id, turn_id=sess.id, role=MessageRole.ASSISTANT.value, content="Your order ORD-000003 is in transit.", sequence_number=2, turn_sequence=1))
+    await session.flush()
 
 
 async def main() -> None:
     factory = _get_session_factory()
     async with factory() as session:
-        print("Seeding users...")  # noqa: T201
+        print("Seeding demo data...")
         users = await seed_users(session)
-        print(f"  {len(users)} users present")
-
-        print("Seeding products...")
+        print(f"  Users: {len(users)}")
         products = await seed_products(session)
-        print(f"  {len(products)} products present")
-
-        print("Seeding orders...")
+        print(f"  Products: {len(products)}")
         await seed_orders(session, users, products)
-
+        print("  Orders: 3 (DELIVERED, PAID, SHIPPED)")
+        await seed_agent_data(session, users)
+        print("  Agent session: 1 demo conversation")
         await session.commit()
         print("Seed complete (idempotent).")
+        print(f"  Demo Customer: {_DEMO_CUST_EMAIL} / {_DEMO_CUST_PASS}")
+        print(f"  Demo Admin:    {_DEMO_ADMIN_EMAIL} / {_DEMO_ADMIN_PASS}")
 
 
 if __name__ == "__main__":

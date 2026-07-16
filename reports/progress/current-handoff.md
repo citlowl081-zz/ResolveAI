@@ -10,9 +10,10 @@
 
 **Phase 07A — Customer Web & Admin Web: COMPLETE**
 
-Phase 08 is fully implemented. 467 tests pass with zero failures.
-Key deliverables: 7 E2E business scenarios, 12 Agent/RAG/Memory metrics with real values, 14 security tests (RBAC/IDOR/PII), 4 concurrency tests, 6 performance baselines, Playwright E2E config for both frontends (15 specs), comprehensive evaluation report in `reports/phase-08-evaluation-report.md`.
-Next phase: Phase 09 — Deployment & CI/CD (not started).
+Phase 09 is complete. Project is READY FOR DEMO / PORTFOLIO.
+Key deliverables: Docker Compose (4 services, one-command start), CI/CD pipeline (ruff+mypy+pytest+frontend builds+docker), demo seed data with env accounts, complete README with architecture diagrams, 5-min + 10-min demo scripts, deployment guide, resume materials.
+468 backend tests (0 failures), 15 Playwright E2E specs, 3 Dockerfiles, 52 API endpoints, 34 frontend routes across 3 apps.
+Next: commit, push, verify CI, and prepare for portfolio presentation.
 
 ---
 

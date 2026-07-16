@@ -1,14 +1,10 @@
-# ============================================================
-# ResolveAI - Docker Compose (Development)
-# ============================================================
-# Start all services: docker compose up -d
-# Stop all services:  docker compose down
-# Reset (with data):  docker compose down -v && docker compose up -d
-
-version: "3.9"
+# ResolveAI — Docker Compose (Development / Demo)
+# Start:  docker compose up -d
+# Stop:   docker compose down
+# Reset:  docker compose down -v && docker compose up -d
 
 services:
-  # ---- PostgreSQL 16 + pgvector ----
+  # ── PostgreSQL 16 + pgvector ──
   db:
     image: pgvector/pgvector:pg16
     container_name: resolveai-db
@@ -21,32 +17,33 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-resolveai} -d ${POSTGRES_DB:-resolveai}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-resolveai}"]
       interval: 5s
       timeout: 5s
       retries: 5
     restart: unless-stopped
 
-  # ---- Backend (FastAPI) ----
+  # ── Backend (FastAPI + LangGraph) ──
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./backend/Dockerfile
     container_name: resolveai-backend
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-resolveai}:${POSTGRES_PASSWORD:-resolveai-dev}@db:5432/${POSTGRES_DB:-resolveai}
-      LLM_PROVIDER: ${LLM_PROVIDER:-anthropic}
+      LLM_PROVIDER: ${LLM_PROVIDER:-mock}
       LLM_MODEL: ${LLM_MODEL:-claude-sonnet-5-20251001}
-      LLM_API_KEY: ${LLM_API_KEY}
-      LLM_BASE_URL: ${LLM_BASE_URL:-https://api.anthropic.com}
-      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-openai}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-mock}
       EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-3-small}
-      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY}
+      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-dev-secret-change-in-production}
       APP_ENV: ${APP_ENV:-development}
-      DEBUG: ${DEBUG:-true}
-      LOG_LEVEL: ${LOG_LEVEL:-DEBUG}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:3001}
+      DEMO_CUSTOMER_EMAIL: ${DEMO_CUSTOMER_EMAIL:-demo@example.com}
+      DEMO_CUSTOMER_PASSWORD: ${DEMO_CUSTOMER_PASSWORD:-demo123456}
+      DEMO_ADMIN_EMAIL: ${DEMO_ADMIN_EMAIL:-admin@example.com}
+      DEMO_ADMIN_PASSWORD: ${DEMO_ADMIN_PASSWORD:-admin123456}
     ports:
       - "8000:8000"
     depends_on:
@@ -55,12 +52,16 @@ services:
     command: >
       sh -c "alembic upgrade head &&
              python -m app.database.seed &&
-             uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
-    volumes:
-      - ./backend:/app
+             python -m app.database.ingest_policies &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000"
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
-  # ---- Customer Web (Next.js) ----
+  # ── Customer Web (Next.js) ──
   customer-web:
     build:
       context: ./frontend/customer-web
@@ -68,14 +69,14 @@ services:
     container_name: resolveai-customer-web
     environment:
       NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000/api/v1}
-      NEXT_PUBLIC_AGENT_WS_URL: ${NEXT_PUBLIC_AGENT_WS_URL:-ws://localhost:8000/api/v1/agent/ws}
     ports:
       - "3000:3000"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     restart: unless-stopped
 
-  # ---- Admin Web (Next.js) ----
+  # ── Admin Web (Next.js) ──
   admin-web:
     build:
       context: ./frontend/admin-web
@@ -86,7 +87,8 @@ services:
     ports:
       - "3001:3001"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:
