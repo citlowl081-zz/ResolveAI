@@ -672,6 +672,26 @@ class TestAnthropicProviderChat:
             # _build_client should only have been called once
             assert mock_build.call_count == 1
 
+    @pytest.mark.asyncio
+    async def test_custom_base_url_is_passed_to_client(self) -> None:
+        mock_client = _make_mock_anthropic_client()
+        with patch(
+            "app.llm.anthropic_provider._build_client",
+            return_value=mock_client,
+        ) as mock_build:
+            provider = AnthropicProvider(
+                api_key="test-key", default_model="anthropic-test-model",
+                timeout=30, max_retries=2,
+                base_url="https://anthropic-compatible.example/v1",
+            )
+            await provider.chat(
+                ChatRequest(messages=[ChatMessage(role="user", content="Hi")]),
+            )
+
+        mock_build.assert_called_once_with(
+            "test-key", 30, 2, "https://anthropic-compatible.example/v1",
+        )
+
 
 # ---------------------------------------------------------------------------
 # Error handling tests
@@ -774,6 +794,27 @@ class TestErrorHandling:
             with pytest.raises(RuntimeError, match="Unexpected internal SDK error"):
                 await provider.chat(request)
 
+    @pytest.mark.asyncio
+    async def test_api_key_is_redacted_from_exception(self) -> None:
+        secret = "sk-real-looking-secret-value"
+        mock_client = AsyncMock()
+        mock_client.messages.create = AsyncMock(
+            side_effect=Exception(f"upstream rejected credential {secret}"),
+        )
+
+        with patch(
+            "app.llm.anthropic_provider._build_client",
+            return_value=mock_client,
+        ):
+            provider = AnthropicProvider(api_key=secret, default_model="model")
+            with pytest.raises(RuntimeError) as caught:
+                await provider.chat(ChatRequest(
+                    messages=[ChatMessage(role="user", content="Hi")],
+                ))
+
+        assert secret not in str(caught.value)
+        assert "[REDACTED]" in str(caught.value)
+
 
 # ---------------------------------------------------------------------------
 # chat_structured tests
@@ -784,8 +825,8 @@ class TestChatStructured:
     """Tests for :meth:`AnthropicProvider.chat_structured`."""
 
     @pytest.mark.asyncio
-    async def test_chat_structured_forces_tool_choice(self) -> None:
-        """chat_structured must force tool_choice to the wrapper tool."""
+    async def test_chat_structured_uses_any_with_only_wrapper_tool(self) -> None:
+        """Structured output must use the compatible ``any`` tool choice."""
         output_schema: dict[str, Any] = {
             "type": "object",
             "properties": {
@@ -818,14 +859,13 @@ class TestChatStructured:
             )
             result = await provider.chat_structured(request, output_schema)
 
-        # The tool_choice MUST be forced to the wrapper tool
         call_kwargs = mock_client.messages.create.call_args.kwargs
-        assert call_kwargs["tool_choice"] == {"type": "tool", "name": "structured_output"}
+        assert call_kwargs["tool_choice"] == {"type": "any"}
 
         # Tools must include the wrapper tool
         assert call_kwargs["tools"] is not None
         tool_names = [t["name"] for t in call_kwargs["tools"]]
-        assert "structured_output" in tool_names
+        assert tool_names == ["structured_output"]
 
         # The wrapper tool's input_schema must be the output_schema
         wrapper = next(t for t in call_kwargs["tools"] if t["name"] == "structured_output")
@@ -836,8 +876,8 @@ class TestChatStructured:
         assert parsed == {"sentiment": "positive", "confidence": 0.95}
 
     @pytest.mark.asyncio
-    async def test_chat_structured_with_additional_tools(self) -> None:
-        """When the request includes other tools, the wrapper is prepended."""
+    async def test_chat_structured_does_not_mix_additional_tools(self) -> None:
+        """Only the wrapper tool may satisfy a structured-output request."""
         output_schema: dict[str, Any] = {
             "type": "object",
             "properties": {"summary": {"type": "string"}},
@@ -873,9 +913,8 @@ class TestChatStructured:
 
         call_kwargs = mock_client.messages.create.call_args.kwargs
         tool_names = [t["name"] for t in call_kwargs["tools"]]
-        # structured_output must be first, then the user's tools
-        assert tool_names == ["structured_output", "lookup"]
-        assert call_kwargs["tool_choice"] == {"type": "tool", "name": "structured_output"}
+        assert tool_names == ["structured_output"]
+        assert call_kwargs["tool_choice"] == {"type": "any"}
 
     @pytest.mark.asyncio
     async def test_chat_structured_passes_through_system_message(self) -> None:
@@ -913,7 +952,7 @@ class TestChatStructured:
 
     @pytest.mark.asyncio
     async def test_chat_structured_no_tool_calls_in_response(self) -> None:
-        """Edge case: response has no tool_calls (model ignored the forced tool)."""
+        """A response without the wrapper tool is not structured output."""
         output_schema: dict[str, Any] = {
             "type": "object",
             "properties": {"x": {"type": "string"}},
@@ -932,9 +971,54 @@ class TestChatStructured:
             request = ChatRequest(
                 messages=[ChatMessage(role="user", content="Hello")],
             )
+            with pytest.raises(ValueError, match="structured output"):
+                await provider.chat_structured(request, output_schema)
+
+    @pytest.mark.asyncio
+    async def test_chat_structured_accepts_schema_valid_text_json_fallback(self) -> None:
+        output_schema: dict[str, Any] = {
+            "type": "object",
+            "properties": {"answer": {"type": "string"}},
+            "required": ["answer"],
+        }
+        mock_resp = _make_mock_anthropic_response(
+            content_blocks=[_make_text_block('{"answer":"ok"}')],
+            stop_reason="end_turn",
+        )
+        mock_client = _make_mock_anthropic_client(response=mock_resp)
+
+        with patch(
+            "app.llm.anthropic_provider._build_client",
+            return_value=mock_client,
+        ):
+            provider = AnthropicProvider(api_key="sk-fake", default_model="claude-x")
+            request = ChatRequest(messages=[ChatMessage(role="user", content="Answer")])
             result = await provider.chat_structured(request, output_schema)
 
-        # When there are no tool_calls, content is left as the text response
-        assert result.content == "I cannot produce structured output."
-        assert result.tool_calls == []
-        assert result.finish_reason == "stop"
+        assert json.loads(result.content) == {"answer": "ok"}
+
+    @pytest.mark.asyncio
+    async def test_chat_structured_rejects_arguments_that_violate_schema(self) -> None:
+        output_schema: dict[str, Any] = {
+            "type": "object",
+            "properties": {"confidence": {"type": "number", "maximum": 1.0}},
+            "required": ["confidence"],
+        }
+        mock_resp = _make_mock_anthropic_response(
+            content_blocks=[
+                _make_tool_use_block(
+                    "tc_invalid", "structured_output", {"confidence": "high"},
+                ),
+            ],
+            stop_reason="tool_use",
+        )
+        mock_client = _make_mock_anthropic_client(response=mock_resp)
+
+        with patch(
+            "app.llm.anthropic_provider._build_client",
+            return_value=mock_client,
+        ):
+            provider = AnthropicProvider(api_key="sk-fake", default_model="claude-x")
+            request = ChatRequest(messages=[ChatMessage(role="user", content="Classify")])
+            with pytest.raises(ValueError, match="schema"):
+                await provider.chat_structured(request, output_schema)

@@ -108,6 +108,9 @@ class ChatResponse:
     latency_ms: int = 0
     """Wall-clock latency of the API call in milliseconds."""
 
+    metadata: dict[str, Any] = field(default_factory=dict)
+    """Non-sensitive provider diagnostics for trace generation."""
+
 
 class ModelProvider(ABC):
     """Abstract base class for LLM model providers.
@@ -115,6 +118,12 @@ class ModelProvider(ABC):
     Every provider (Anthropic, OpenAI, mock, etc.) must implement both
     ``chat()`` and ``chat_structured()``.
     """
+
+    @property
+    def provider_name(self) -> str:
+        """Return a non-sensitive provider identifier for traces."""
+        name = type(self).__name__.removesuffix("Provider").lower()
+        return name or "unknown"
 
     @abstractmethod
     async def chat(self, request: ChatRequest) -> ChatResponse:

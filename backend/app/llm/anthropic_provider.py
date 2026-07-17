@@ -18,13 +18,16 @@ from app.llm.provider import (
     ModelProvider,
     ToolDefinition,
 )
+from app.llm.schema_validation import validate_schema_value
 
 # ---------------------------------------------------------------------------
 # Internal helpers — keep Anthropic SDK references confined here.
 # ---------------------------------------------------------------------------
 
 
-def _build_client(api_key: str, timeout: int, max_retries: int) -> Any:
+def _build_client(
+    api_key: str, timeout: int, max_retries: int, base_url: str | None = None,
+) -> Any:
     """Lazily construct an :class:`anthropic.AsyncAnthropic` client.
 
     The import is deferred so the module can be imported (and MockProvider
@@ -32,11 +35,23 @@ def _build_client(api_key: str, timeout: int, max_retries: int) -> Any:
     """
     import anthropic
 
-    return anthropic.AsyncAnthropic(
-        api_key=api_key,
-        timeout=float(timeout),
-        max_retries=max_retries,
-    )
+    kwargs: dict[str, Any] = {
+        "api_key": api_key,
+        "timeout": float(timeout),
+        "max_retries": max_retries,
+    }
+    if base_url:
+        kwargs["base_url"] = base_url
+
+    return anthropic.AsyncAnthropic(**kwargs)
+
+
+def _sanitize_provider_exception(exc: Exception, secret: str) -> Exception:
+    """Remove credentials if an upstream exception accidentally includes them."""
+    message = str(exc)
+    if secret and secret in message:
+        return RuntimeError(message.replace(secret, "[REDACTED]"))
+    return exc
 
 
 # ---------------------------------------------------------------------------
@@ -190,21 +205,20 @@ def _anthropic_response_to_chat_response(
 
 
 class AnthropicProvider(ModelProvider):
-    """Anthropic Claude provider wrapping ``anthropic.AsyncAnthropic``.
+    """Anthropic provider wrapping ``anthropic.AsyncAnthropic``.
 
     Parameters
     ----------
     api_key:
-        Anthropic API key.
+        API key.
     default_model:
-        Model id to use when the request does not specify one
-        (e.g. ``"claude-sonnet-5-20251001"``).
+        Anthropic model id.
     timeout:
-        Request timeout in seconds.  Defaults to the value of the
-        ``LLM_TIMEOUT_SECONDS`` environment variable, or 60.
+        Request timeout in seconds.  Defaults to 60.
     max_retries:
-        Maximum automatic retries.  Defaults to the value of
-        ``LLM_MAX_RETRIES``, or 1.
+        Maximum automatic retries.  Defaults to 1.
+    base_url:
+        Optional Anthropic-compatible Messages API base URL.
     """
 
     def __init__(
@@ -213,12 +227,19 @@ class AnthropicProvider(ModelProvider):
         default_model: str,
         timeout: int = 60,
         max_retries: int = 1,
+        base_url: str | None = None,
     ) -> None:
         self._api_key = api_key
         self._default_model = default_model
         self._timeout = timeout
         self._max_retries = max_retries
+        self._base_url = base_url
         self._client: Any = None  # anthropic.AsyncAnthropic (lazy)
+
+    @property
+    def provider_name(self) -> str:
+        """Return the provider identifier used in traces."""
+        return "anthropic"
 
     # ------------------------------------------------------------------
     # chat
@@ -233,15 +254,21 @@ class AnthropicProvider(ModelProvider):
         tool_choice = self._build_tool_choice(request.tool_choice)
 
         t0 = time.monotonic()
-        response = await client.messages.create(
-            model=self._default_model,
-            messages=anthropic_msgs,
-            system=system,
-            max_tokens=request.max_tokens,
-            temperature=request.temperature,
-            tools=tools,
-            tool_choice=tool_choice,
-        )
+        try:
+            response = await client.messages.create(
+                model=self._default_model,
+                messages=anthropic_msgs,
+                system=system,
+                max_tokens=request.max_tokens,
+                temperature=request.temperature,
+                tools=tools,
+                tool_choice=tool_choice,
+            )
+        except Exception as exc:
+            safe_exc = _sanitize_provider_exception(exc, self._api_key)
+            if safe_exc is exc:
+                raise
+            raise safe_exc from None
         elapsed_ms = int((time.monotonic() - t0) * 1000)
 
         return _anthropic_response_to_chat_response(
@@ -270,24 +297,26 @@ class AnthropicProvider(ModelProvider):
             input_schema=output_schema,
         )
 
-        all_tools: list[ToolDefinition] = [wrapper_tool]
-        if request.tools:
-            all_tools = [wrapper_tool] + list(request.tools)
-
         anthropic_msgs, system = _messages_to_anthropic(request.messages)
-        tools = _tools_to_anthropic(all_tools)
-        tool_choice: dict[str, Any] = {"type": "tool", "name": "structured_output"}
+        tools = _tools_to_anthropic([wrapper_tool])
+        tool_choice: dict[str, Any] = {"type": "any"}
 
         t0 = time.monotonic()
-        response = await client.messages.create(
-            model=self._default_model,
-            messages=anthropic_msgs,
-            system=system,
-            max_tokens=request.max_tokens,
-            temperature=request.temperature,
-            tools=tools,
-            tool_choice=tool_choice,
-        )
+        try:
+            response = await client.messages.create(
+                model=self._default_model,
+                messages=anthropic_msgs,
+                system=system,
+                max_tokens=request.max_tokens,
+                temperature=request.temperature,
+                tools=tools,
+                tool_choice=tool_choice,
+            )
+        except Exception as exc:
+            safe_exc = _sanitize_provider_exception(exc, self._api_key)
+            if safe_exc is exc:
+                raise
+            raise safe_exc from None
         elapsed_ms = int((time.monotonic() - t0) * 1000)
 
         result = _anthropic_response_to_chat_response(
@@ -298,7 +327,14 @@ class AnthropicProvider(ModelProvider):
         # tool_use blocks — no text.  Extract the structured data and
         # place it in content so callers get a uniform experience.
         if result.tool_calls:
-            result.content = json.dumps(result.tool_calls[0]["arguments"])
+            arguments = result.tool_calls[0]["arguments"]
+        else:
+            try:
+                arguments = json.loads(result.content)
+            except json.JSONDecodeError as exc:
+                raise ValueError("Provider did not return structured output") from exc
+        validate_schema_value(arguments, output_schema)
+        result.content = json.dumps(arguments)
 
         return result
 
@@ -310,7 +346,7 @@ class AnthropicProvider(ModelProvider):
         """Return the lazy-constructed AsyncAnthropic client."""
         if self._client is None:
             self._client = _build_client(
-                self._api_key, self._timeout, self._max_retries
+                self._api_key, self._timeout, self._max_retries, self._base_url,
             )
         return self._client
 

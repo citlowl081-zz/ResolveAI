@@ -26,6 +26,13 @@ docker compose down           # keep data
 docker compose down -v         # reset everything
 ```
 
+The default clone/demo configuration uses mock LLM and embedding providers and
+requires no model API key. For an optional local real-model demo, run
+`bash scripts/configure-qwen.sh` and provide your own Qwen API key and
+OpenAI-compatible Base URL through the local `.env`. The verified local model is
+`qwen3.7-plus`. Never commit those values; use deployment-platform secrets
+outside local development.
+
 ### Services
 | Service | Port | Health Check |
 |---|---|---|

@@ -2,12 +2,14 @@
 
 import os
 
+import pytest
+
 
 def test_settings_defaults() -> None:
     """Settings load with expected default values."""
     from app.config.settings import Settings
 
-    s = Settings()
+    s = Settings.model_construct()
     assert s.app_name == "ResolveAI"
     assert s.app_version == "0.1.0"
     assert s.app_env == "development"
@@ -54,3 +56,30 @@ def test_env_override() -> None:
         assert s.app_env == "production"
     finally:
         del os.environ["APP_ENV"]
+
+
+def test_openai_compatible_settings_require_key_and_base_url() -> None:
+    """Incomplete real-provider configuration fails explicitly."""
+    from pydantic import ValidationError
+
+    from app.config.settings import Settings
+
+    with pytest.raises(ValidationError, match="configuration is incomplete"):
+        Settings(
+            debug=False,
+            llm_provider="openai_compatible",
+            llm_api_key="",
+            llm_base_url="",
+        )
+
+
+def test_settings_ignore_unrelated_env_file_fields() -> None:
+    """A shared root .env may contain frontend and seed-only variables."""
+    from app.config.settings import Settings
+
+    config = Settings.model_validate({
+        "llm_provider": "mock",
+        "next_public_api_base_url": "http://localhost:8000/api/v1",
+    })
+
+    assert config.llm_provider == "mock"

@@ -3,7 +3,6 @@
 import hashlib
 import json
 import uuid
-from typing import Any
 
 from fastapi import APIRouter, Depends, Header, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,23 +23,11 @@ def _get_orchestrator() -> AgentOrchestrator:
     """Create an AgentOrchestrator with session factory, graph, and LLM provider."""
     from app.agent.graph import build_agent_graph
     from app.config import settings
+    from app.llm.factory import build_model_provider
 
     graph = build_agent_graph()  # type: ignore[no-untyped-call]
     factory = _get_session_factory()
-
-    # Create provider based on config
-    provider: Any = None
-    if settings.llm_provider == "anthropic" and settings.llm_api_key:
-        from app.llm.anthropic_provider import AnthropicProvider
-        provider = AnthropicProvider(
-            api_key=settings.llm_api_key,
-            default_model=settings.llm_model,
-            timeout=settings.llm_timeout_seconds,
-            max_retries=settings.llm_max_retries,
-        )
-    elif settings.llm_provider == "mock":
-        from app.llm.mock_provider import MockProvider
-        provider = MockProvider()
+    provider = build_model_provider(settings)
 
     return AgentOrchestrator(session_factory=factory, graph=graph, llm=provider)
 

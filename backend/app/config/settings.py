@@ -3,6 +3,9 @@
 Reads from environment variables with prefix support.
 """
 
+from typing import Self
+
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -13,6 +16,7 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
+        extra="ignore",
     )
 
     # ---- App ----
@@ -50,10 +54,10 @@ class Settings(BaseSettings):
         return [origin.strip() for origin in self.cors_origins.split(",")]
 
     # ---- LLM (Phase 03+) ----
-    llm_provider: str = "anthropic"
-    llm_model: str = "claude-sonnet-5-20251001"
+    llm_provider: str = "mock"
+    llm_model: str = "qwen3.7-plus"
     llm_api_key: str = ""
-    llm_base_url: str = "https://api.anthropic.com"
+    llm_base_url: str = ""
     llm_max_tokens: int = 4096
     llm_temperature: float = 0.3
     llm_timeout_seconds: int = 60
@@ -107,6 +111,22 @@ class Settings(BaseSettings):
     # ---- Rate Limiting ----
     rate_limit_enabled: bool = False
     rate_limit_requests_per_minute: int = 60
+
+    @model_validator(mode="after")
+    def validate_llm_configuration(self) -> Self:
+        """Fail startup explicitly for unsupported or incomplete real providers."""
+        provider = self.llm_provider.strip().lower()
+        if provider not in {"mock", "anthropic", "openai_compatible"}:
+            raise ValueError(f"Unsupported LLM_PROVIDER: {provider}")
+        if provider == "anthropic" and not self.llm_api_key:
+            raise ValueError("Anthropic provider configuration is incomplete")
+        if provider == "openai_compatible" and (
+            not self.llm_api_key or not self.llm_base_url
+        ):
+            raise ValueError(
+                "OpenAI-compatible provider configuration is incomplete"
+            )
+        return self
 
 
 settings = Settings()

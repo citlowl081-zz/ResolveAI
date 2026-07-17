@@ -37,7 +37,7 @@ Customer: "Remember I prefer Alipay for refunds"
 |---|---|
 | Backend | Python 3.12, FastAPI, SQLAlchemy 2 (async), Pydantic 2 |
 | Agent | LangGraph (9-node state machine) |
-| LLM | Anthropic Claude (via provider abstraction, mock provider for dev) |
+| LLM | OpenAI-compatible Qwen for local real demos; mock for CI/demo; optional Anthropic |
 | Database | PostgreSQL 16 + pgvector |
 | RAG | pgvector exact cosine similarity, Chinese-friendly chunking |
 | Frontend | Next.js 14, TypeScript, Tailwind CSS |
@@ -200,13 +200,14 @@ See [.env.example](.env.example) for all configuration options.
 Key settings:
 - `LLM_PROVIDER=mock` — no API key needed for local demo
 - `EMBEDDING_PROVIDER=mock` — no API key needed for local demo
-- `LLM_PROVIDER=anthropic` + `LLM_API_KEY` — use real Claude
+- `LLM_PROVIDER=openai_compatible` + local `LLM_BASE_URL` and `LLM_API_KEY` — use Qwen through Bailian's OpenAI-compatible API
+- `LLM_PROVIDER=anthropic` + `LLM_API_KEY` — optionally use Anthropic
 - `EMBEDDING_PROVIDER=openai` + `EMBEDDING_API_KEY` — use real embeddings
 
 ## Known Limitations
 
 1. No real payment gateway (refunds are simulated)
-2. Mock LLM provider returns template responses (switch to `anthropic` for real LLM)
+2. Mock LLM provider returns template responses (run `bash scripts/configure-qwen.sh` for a local real-LLM demo)
 3. No Redis/Kafka/microservices (by design, Phases 00–06)
 4. No WebSocket/SSE (agent uses sync HTTP request-response)
 5. WeChat Mini Program requires WeChat Developer Tools for local testing
