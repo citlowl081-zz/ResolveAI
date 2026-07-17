@@ -109,11 +109,16 @@ class AgentOrchestrator:
                 user_id, session_id_val, turn_id, pending_action,
             )
             if approval_needed:
-                # Release turn, return PENDING_APPROVAL — do NOT run graph
-                async with self.session_factory() as cleanup_session:
-                    repo = AgentSessionRepository(cleanup_session)
-                    await repo.clear_active_turn(session_id_val, turn_id)
-                    await cleanup_session.commit()
+                # Atomically consume the action, cache the handoff response,
+                # and release the turn. Replays must not create another task.
+                await self._complete_approval_handoff(
+                    user_id=user_id,
+                    session_id=session_id_val,
+                    turn_id=turn_id,
+                    idempotency_key=idempotency_key,
+                    pending_action=pending_action,
+                    response=approval_needed,
+                )
                 return approval_needed
 
         # ── Build initial state ─────────────────────────────────────
@@ -139,6 +144,7 @@ class AgentOrchestrator:
             "intent": None,
             "confidence": None,
             "extracted_entities": None,
+            "request_mode": None,
             "planned_tools": None,
             "authorized_tools": None,
             "forbidden_tools": None,
@@ -150,6 +156,7 @@ class AgentOrchestrator:
             "loop_count": 0,
             "max_loops": settings.agent_max_loops_per_turn,
             "max_tools_per_turn": settings.agent_max_tools_per_turn,
+            "retry_tool_execution": False,
             "errors": [],
             "injection_detected": False,
             "terminal_error": False,
@@ -250,11 +257,20 @@ class AgentOrchestrator:
         if confirm_action_id:
             cs = sess.context_snapshot or {}
             pa = cs.get("pending_action")
+            validation_code: str | None = "ACTION_NOT_FOUND"
             if pa and pa.get("action_id") == confirm_action_id:
                 from app.agent.pending_action_builder import validate_pending_action
-                is_valid, _ = validate_pending_action(pa, confirm_action_id)
+                is_valid, validation_code = validate_pending_action(
+                    pa, confirm_action_id,
+                )
                 pending_action = pa
                 pending_action_valid = is_valid
+            if not pending_action_valid:
+                error = ConflictError(validation_code or "ACTION_NOT_FOUND")
+                error.code = validation_code or "ACTION_NOT_FOUND"
+                return {
+                    "error": error,
+                }
 
         # 7. Save USER message
         seq = await msg_repo.get_next_sequence(sess.id)
@@ -286,6 +302,7 @@ class AgentOrchestrator:
         return {
             "session_id": state["session_id"],
             "messages": state.get("context_messages", []),
+            "message": state.get("response_text") or "",
             "proposed_actions": state.get("proposed_actions") or [],
             "citations": state.get("citations") or [],
             "trace_id": state["trace_id"],
@@ -357,6 +374,38 @@ class AgentOrchestrator:
             "session_id": str(session_id),
             "error": {"code": code, "message": message},
         }
+
+    async def _complete_approval_handoff(
+        self,
+        *,
+        user_id: uuid.UUID,
+        session_id: uuid.UUID,
+        turn_id: uuid.UUID,
+        idempotency_key: str,
+        pending_action: dict,
+        response: dict,
+    ) -> None:
+        """Complete the confirmation request once it is handed to approval."""
+        async with self.session_factory() as session:
+            sess_repo = AgentSessionRepository(session)
+            sess = await sess_repo.get_by_id_for_update(session_id)
+            if sess is not None:
+                snapshot = dict(sess.context_snapshot or {})
+                consumed = dict(pending_action)
+                consumed["status"] = "CONSUMED"
+                snapshot["pending_action"] = consumed
+                sess.context_snapshot = snapshot
+
+            idem_service = IdempotencyService(session)
+            await idem_service.complete(
+                user_id,
+                "agent_message",
+                idempotency_key,
+                response_status=200,
+                response_body=response,
+            )
+            await sess_repo.clear_active_turn(session_id, turn_id)
+            await session.commit()
 
     async def _handle_recoverable_interruption(
         self, exc: Exception, state: AgentState,
@@ -769,18 +818,28 @@ class AgentOrchestrator:
                 customer_request=payload.get("customer_request", ""),
                 user_agent="admin-approval",
             )
-            await session.commit()
 
             # Write tool log
             turn_id = task.turn_id or uuid.uuid4()
             trace_id = uuid.uuid4()
             from app.agent.sanitization import strip_pii_from_dict
             from app.models.agent_tool_log import AgentToolLog
+            from app.repositories.agent_message import AgentMessageRepository
+
+            if task.agent_session_id is None:
+                from app.exceptions import ValidationError
+                raise ValidationError("Approval task is missing its agent session")
+            messages = await AgentMessageRepository(session).get_by_session_turn(
+                task.agent_session_id, turn_id,
+            )
+            if not messages:
+                from app.exceptions import ValidationError
+                raise ValidationError("Approval task has no persisted agent message")
 
             log = AgentToolLog(
-                session_id=task.agent_session_id or uuid.uuid4(),
+                session_id=task.agent_session_id,
                 turn_id=turn_id,
-                message_id=uuid.uuid4(),
+                message_id=messages[-1].id,
                 trace_id=trace_id,
                 tool_call_id=task.action_id,
                 tool_name=task.tool_name,

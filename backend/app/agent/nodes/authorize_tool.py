@@ -20,6 +20,7 @@ async def authorize_tool(state: AgentState) -> AgentState:
         "get_order", "list_orders", "get_logistics",
         "get_after_sales_ticket", "list_after_sales_tickets",
         "create_after_sales_ticket", "cancel_after_sales_ticket",
+        "search_after_sales_policy",
     }
 
     authorized: list[dict] = []

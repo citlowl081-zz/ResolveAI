@@ -1,5 +1,6 @@
 "use client";
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { auth, setTokens, clearTokens, loadTokens, onUnauthorized, type UserInfo } from "./api";
 
 interface AuthState {
@@ -16,13 +17,16 @@ const AuthContext = createContext<AuthState>({
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const router = useRouter();
+  const pathname = usePathname();
   const [user, setUser] = useState<UserInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
   const logout = useCallback(() => {
     clearTokens();
     setUser(null);
-  }, []);
+    router.replace("/login");
+  }, [router]);
 
   useEffect(() => {
     loadTokens();
@@ -32,6 +36,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .catch(() => logout())
       .finally(() => setLoading(false));
   }, [logout]);
+
+  useEffect(() => {
+    const protectedPaths = ["/agent", "/orders", "/tickets", "/memories", "/approvals"];
+    const isProtected = protectedPaths.some(
+      path => pathname === path || pathname.startsWith(`${path}/`)
+    );
+    if (!loading && !user && isProtected) router.replace("/login");
+  }, [loading, pathname, router, user]);
 
   const login = useCallback(async (email: string, password: string) => {
     const r = await auth.login(email, password);

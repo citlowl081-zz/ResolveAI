@@ -97,6 +97,7 @@ export default function AgentPage() {
                   {m.citations.map((c, j) => (
                     <div key={j} className="text-xs text-gray-500 mt-1">
                       <span className="font-mono bg-gray-100 px-1 rounded">{c.policy_key}</span> v{c.version} — {c.title} ({(c.similarity_score * 100).toFixed(0)}%)
+                      {c.source && <span> · {c.source === "legal_requirement" ? "法律规则" : "平台规则"}</span>}
                     </div>
                   ))}
                 </div>

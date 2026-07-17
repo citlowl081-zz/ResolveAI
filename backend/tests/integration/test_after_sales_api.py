@@ -159,6 +159,22 @@ async def test_create_ticket_duplicate_rejected(
 
 @pytest.mark.integration
 @pytest.mark.asyncio
+async def test_ticket_list_includes_version_for_cancellation(
+    async_client: AsyncClient, customer_auth: dict,
+) -> None:
+    response = await async_client.get(
+        "/api/v1/after-sales/tickets",
+        headers=customer_auth["headers"],
+    )
+
+    assert response.status_code == 200
+    for ticket in response.json()["data"]["items"]:
+        assert isinstance(ticket["version"], int)
+        assert ticket["version"] >= 1
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
 async def test_full_refund_flow(
     async_client: AsyncClient, customer_auth: dict, admin_auth: dict,
 ) -> None:

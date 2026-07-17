@@ -128,7 +128,10 @@ async def approve_task(
     )
 
     result = _task_to_response(task)
-    await idem_service.complete(op_id, "approval_decide", idempotency_key, 200, result.model_dump(), task_id)
+    await idem_service.complete(
+        op_id, "approval_decide", idempotency_key, 200,
+        result.model_dump(mode="json"), task_id,
+    )
     return APIResponse(success=True, code="OK", message="Approved", data=result)
 
 
@@ -163,7 +166,10 @@ async def reject_task(
     )
 
     result = _task_to_response(task)
-    await idem_service.complete(op_id, "approval_decide", idempotency_key, 200, result.model_dump(), task_id)
+    await idem_service.complete(
+        op_id, "approval_decide", idempotency_key, 200,
+        result.model_dump(mode="json"), task_id,
+    )
     return APIResponse(success=True, code="OK", message="Rejected", data=result)
 
 

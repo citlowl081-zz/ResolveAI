@@ -17,11 +17,16 @@ export default function OrderDetailPage() {
 
   useEffect(() => {
     orders.get(id).then(r => {
-      if (r.success && r.data) setOrder(r.data);
+      if (!r.success || !r.data) return;
+      setOrder(r.data);
+      if (r.data.status === "SHIPPED" || r.data.status === "DELIVERED") {
+        logistics.get(id).then(logisticsResponse => {
+          if (logisticsResponse.success && logisticsResponse.data) {
+            setLog(logisticsResponse.data);
+          }
+        }).catch(() => {});
+      }
     }).finally(() => setLoading(false));
-    logistics.get(id).then(r => {
-      if (r.success && r.data) setLog(r.data);
-    }).catch(() => {});
   }, [id]);
 
   return (

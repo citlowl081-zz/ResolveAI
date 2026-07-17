@@ -305,8 +305,18 @@ class OrderService:
         }
 
     async def _order_summary(self, order) -> dict:  # type: ignore[no-untyped-def]
+        items = await self.order_item_repo.list_by_order(order.id)
         return {
             "id": str(order.id), "order_number": order.order_number,
             "status": order.status, "total_amount": str(order.total_amount),
             "created_at": order.created_at.isoformat() if order.created_at else None,
+            "items": [
+                {
+                    "id": str(item.id),
+                    "product_id": str(item.product_id),
+                    "product_name": item.product_name,
+                    "quantity": item.quantity,
+                }
+                for item in items
+            ],
         }

@@ -33,6 +33,10 @@ export function clearTokens() {
 export function getAccessToken() { return accessToken; }
 export function onUnauthorized(cb: () => void) { onAuthError = cb; }
 
+function idempotencyKey(): string {
+  return crypto.randomUUID();
+}
+
 async function refreshAccessToken(): Promise<boolean> {
   if (!refreshToken) return false;
   try {
@@ -55,10 +59,14 @@ async function request<T>(
   method: string,
   path: string,
   body?: unknown,
-  isRetry = false
+  isRetry = false,
+  extraHeaders: Record<string, string> = {},
 ): Promise<T> {
   loadTokens();
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...extraHeaders,
+  };
   if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
 
   const res = await fetch(`${API_BASE}${path}`, {
@@ -69,7 +77,7 @@ async function request<T>(
 
   if (res.status === 401 && !isRetry) {
     const refreshed = await refreshAccessToken();
-    if (refreshed) return request<T>(method, path, body, true);
+    if (refreshed) return request<T>(method, path, body, true, extraHeaders);
     clearTokens();
     onAuthError?.();
     throw new ApiError(401, "Authentication required");
@@ -120,7 +128,8 @@ export const orders = {
 
 // ── Logistics ──
 export const logistics = {
-  get: (orderId: string) => request<{ success: boolean; data: LogisticsInfo }>("GET", `/logistics/${orderId}`),
+  get: (orderId: string) =>
+    request<{ success: boolean; data: LogisticsInfo }>("GET", `/orders/${orderId}/logistics`),
 };
 
 // ── After-Sales ──
@@ -128,48 +137,46 @@ export const afterSales = {
   create: (orderId: string, intent: string, requestedItems: unknown[], customerRequest: string) =>
     request<{ success: boolean; data: Ticket }>("POST", "/after-sales/tickets", {
       order_id: orderId, intent, requested_items: requestedItems, customer_request: customerRequest,
-    }),
+    }, false, { "Idempotency-Key": idempotencyKey() }),
   list: (page = 1) =>
     request<{ success: boolean; data: PaginatedResponse<Ticket> }>("GET", `/after-sales/tickets?page=${page}&page_size=20`),
   get: (id: string) => request<{ success: boolean; data: Ticket }>("GET", `/after-sales/tickets/${id}`),
   cancel: (id: string, version: number) =>
-    request<{ success: boolean; data: Ticket }>("POST", `/after-sales/tickets/${id}/cancel`, { expected_version: version }),
+    request<{ success: boolean; data: Ticket }>(
+      "POST", `/after-sales/tickets/${id}/cancel`, { expected_version: version },
+      false, { "Idempotency-Key": idempotencyKey() },
+    ),
 };
 
 // ── Agent ──
 export const agent = {
   createSession: (message: string, idempotencyKey: string) =>
-    request<{ success: boolean; data: AgentResponse }>("POST", "/agent/sessions", { message }, )
-      .then(r => ({ ...r, _headers: {} })),
-  createSessionRaw: (message: string, idempotencyKey: string) => {
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
-    headers["Idempotency-Key"] = idempotencyKey;
-    return fetch(`${API_BASE}/agent/sessions`, {
-      method: "POST", headers,
-      body: JSON.stringify({ message }),
-    }).then(r => r.json());
-  },
+    request<{ success: boolean; data: AgentResponse }>(
+      "POST", "/agent/sessions", { message }, false,
+      { "Idempotency-Key": idempotencyKey },
+    ),
+  createSessionRaw: (message: string, idempotencyKey: string) =>
+    request<{ success: boolean; data: AgentResponse }>(
+      "POST", "/agent/sessions", { message }, false,
+      { "Idempotency-Key": idempotencyKey },
+    ),
   sendMessage: (sessionId: string, message: string, confirmActionId: string | null, idempotencyKey: string) => {
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
-    headers["Idempotency-Key"] = idempotencyKey;
     const body: Record<string, unknown> = { message };
     if (confirmActionId) body["confirm_action_id"] = confirmActionId;
-    return fetch(`${API_BASE}/agent/sessions/${sessionId}/messages`, {
-      method: "POST", headers, body: JSON.stringify(body),
-    }).then(r => r.json());
+    return request<{ success: boolean; data: AgentResponse }>(
+      "POST", `/agent/sessions/${sessionId}/messages`, body, false,
+      { "Idempotency-Key": idempotencyKey },
+    );
   },
   listSessions: (page = 1) =>
     request<{ success: boolean; data: PaginatedResponse<AgentSession> }>("GET", `/agent/sessions?page=${page}&page_size=20`),
   getMessages: (sessionId: string, page = 1) =>
     request<{ success: boolean; data: PaginatedResponse<AgentMessage> }>("GET", `/agent/sessions/${sessionId}/messages?page=${page}&page_size=100`),
-  closeSession: (sessionId: string, idempotencyKey: string) => {
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
-    headers["Idempotency-Key"] = idempotencyKey;
-    return fetch(`${API_BASE}/agent/sessions/${sessionId}/close`, { method: "POST", headers }).then(r => r.json());
-  },
+  closeSession: (sessionId: string, idempotencyKey: string) =>
+    request<{ success: boolean; data: AgentSession }>(
+      "POST", `/agent/sessions/${sessionId}/close`, undefined, false,
+      { "Idempotency-Key": idempotencyKey },
+    ),
 };
 
 // ── Memories ──

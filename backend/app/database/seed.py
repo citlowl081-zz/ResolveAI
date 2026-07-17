@@ -6,7 +6,6 @@ All data fictional. Passwords from DEMO_* env vars or safe demo defaults.
 
 import asyncio
 import os
-import random
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
@@ -81,13 +80,12 @@ async def seed_products(session: AsyncSession) -> list[Product]:
 
 
 async def seed_orders(session: AsyncSession, users: dict, products: list[Product]) -> None:
+    from sqlalchemy import select as sa_select
+
     customer = users.get(_DEMO_CUST_EMAIL)
     if customer is None:
         return
     product_map = {p.name: p for p in products}
-
-    def _order_exists(num: str) -> bool:
-        return False  # unused; checked via order_number query below
 
     orders_to_seed = [
         ("ORD-000001", "Wireless Headphones", OrderStatus.DELIVERED.value, 2,
@@ -99,32 +97,50 @@ async def seed_orders(session: AsyncSession, users: dict, products: list[Product
     ]
 
     for order_num, pname, status, qty, paid_delta, ship_delta, deliv_delta, create_delta in orders_to_seed:
-        exists = await session.execute(sa_text("SELECT 1 FROM orders WHERE order_number = :n"), {"n": order_num})
-        if exists.scalar() is not None:
-            continue
-        p = product_map[pname]
-        now = datetime.now(UTC)
-        o = Order(
-            user_id=customer.id, order_number=order_num, status=status,
-            total_amount=p.price * qty, shipping_address="Demo Address",
-            shipping_fee=Decimal("0"), paid_amount=p.price * qty,
-            paid_at=now - paid_delta,
-            shipped_at=now - ship_delta if ship_delta else None,
-            delivered_at=now - deliv_delta if deliv_delta else None,
-            created_at=now - create_delta,
+        result = await session.execute(
+            sa_select(Order).where(Order.order_number == order_num)
         )
-        session.add(o)
-        await session.flush()
-        session.add(OrderItem(order_id=o.id, product_id=p.id, product_name=p.name, unit_price=p.price, quantity=qty, subtotal=p.price * qty))
-        await session.flush()
-        # Add logistics for shipped orders (idempotent by order_id)
-        if status == OrderStatus.SHIPPED.value:
+        order = result.scalar_one_or_none()
+        if order is None:
+            p = product_map[pname]
+            now = datetime.now(UTC)
+            order = Order(
+                user_id=customer.id, order_number=order_num, status=status,
+                total_amount=p.price * qty, shipping_address="Demo Address",
+                shipping_fee=Decimal("0"), paid_amount=p.price * qty,
+                paid_at=now - paid_delta,
+                shipped_at=now - ship_delta if ship_delta else None,
+                delivered_at=now - deliv_delta if deliv_delta else None,
+                created_at=now - create_delta,
+            )
+            session.add(order)
+            await session.flush()
+            session.add(OrderItem(
+                order_id=order.id, product_id=p.id, product_name=p.name,
+                unit_price=p.price, quantity=qty, subtotal=p.price * qty,
+            ))
+            await session.flush()
+
+        # Backfill logistics for shipped and delivered demo orders.
+        if status in {OrderStatus.SHIPPED.value, OrderStatus.DELIVERED.value}:
             log_exists = await session.execute(
-                sa_text("SELECT 1 FROM logistics_records WHERE order_id = :oid"), {"oid": o.id}
+                sa_text("SELECT 1 FROM logistics_records WHERE order_id = :oid"),
+                {"oid": order.id},
             )
             if log_exists.scalar() is None:
-                tn = f"SF{random.randint(10000000000, 99999999999)}"
-                session.add(LogisticsRecord(order_id=o.id, tracking_number=tn, carrier="SF Express", status=LogisticsStatus.IN_TRANSIT.value, current_location="Shanghai DC", events=[]))
+                delivered = status == OrderStatus.DELIVERED.value
+                session.add(LogisticsRecord(
+                    order_id=order.id,
+                    tracking_number=f"SF{order_num.removeprefix('ORD-'):0>11}",
+                    carrier="SF Express",
+                    status=(
+                        LogisticsStatus.DELIVERED.value
+                        if delivered else LogisticsStatus.IN_TRANSIT.value
+                    ),
+                    current_location="Delivered" if delivered else "Shanghai DC",
+                    actual_delivery=order.delivered_at if delivered else None,
+                    events=[],
+                ))
                 await session.flush()
 
 
@@ -138,7 +154,11 @@ async def seed_agent_data(session: AsyncSession, users: dict) -> None:
     if customer is None:
         return
     from sqlalchemy import select as sa_select
-    result = await session.execute(sa_select(AgentSession).where(AgentSession.user_id == customer.id))
+    result = await session.execute(
+        sa_select(AgentSession.id)
+        .where(AgentSession.user_id == customer.id)
+        .limit(1)
+    )
     if result.scalar_one_or_none() is not None:
         return  # Already seeded
 

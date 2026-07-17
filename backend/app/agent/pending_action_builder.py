@@ -85,6 +85,7 @@ def build_pending_action(
         "tool_name": "create_after_sales_ticket",
         "canonical_tool_input": canonical_tool_input,
         "request_hash": _hash_canonical(canonical_tool_input),
+        "description": description,
         "created_at": now.isoformat(),
         "expires_at": expires_at.isoformat(),
         "status": "PENDING",

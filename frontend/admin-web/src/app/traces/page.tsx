@@ -23,14 +23,26 @@ export default function TracesPage() {
         <div className="overflow-x-auto">
           <table className="w-full bg-white rounded-lg border">
             <thead><tr className="border-b bg-gray-50 text-left text-sm text-gray-600">
-              <th className="p-3">时间</th><th className="p-3">Node</th><th className="p-3">Seq</th><th className="p-3">耗时(ms)</th><th className="p-3">成功</th><th className="p-3">错误</th>
+              <th className="p-3">时间</th><th className="p-3">Node</th><th className="p-3">路由 / Provider</th><th className="p-3">Tool</th><th className="p-3">耗时(ms)</th><th className="p-3">成功</th><th className="p-3">错误</th>
             </tr></thead>
             <tbody>
               {items.map(t => (
                 <tr key={t.id} className="border-b text-sm">
                   <td className="p-3 text-gray-400">{t.created_at ? new Date(t.created_at).toLocaleTimeString() : "-"}</td>
                   <td className="p-3 font-mono">{t.node_name}</td>
-                  <td className="p-3">{t.sequence}</td>
+                  <td className="p-3 text-xs">
+                    <div>{t.routing_decision || "-"}</div>
+                    {t.llm_call && (
+                      <div className="text-gray-500">
+                        provider={String(t.llm_call.provider || "-")}
+                        {" · "}success={String(t.llm_call.real_llm_success ?? "-")}
+                        {" · "}fallback={String(t.llm_call.fallback_used ?? false)}
+                      </div>
+                    )}
+                  </td>
+                  <td className="p-3 text-xs font-mono">
+                    {t.tool_calls_summary?.map(call => String(call.selected_tool || "-")).join(", ") || "-"}
+                  </td>
                   <td className="p-3">{t.duration_ms}</td>
                   <td className="p-3">{t.is_success ? <span className="text-green-600">✓</span> : <span className="text-red-600">✗</span>}</td>
                   <td className="p-3 text-red-500 text-xs">{t.error_code || "-"}</td>

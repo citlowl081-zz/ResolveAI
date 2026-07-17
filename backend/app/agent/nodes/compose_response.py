@@ -2,7 +2,7 @@
 
 import json
 import time
-from typing import Any, cast
+from typing import Any
 
 from app.agent.pending_action_builder import (
     build_pending_action,
@@ -39,26 +39,50 @@ async def compose_response(state: AgentState) -> AgentState:
         fallback_used = False
         try:
             response = await _llm_compose(state, provider)
+            if not response.content:
+                raise ValueError("Provider returned empty structured response")
             elapsed_ms = int((time.monotonic() - t0) * 1000)
+            provider_fallback = bool(response.metadata.get("fallback_used", False))
             state.setdefault("node_timings", []).append({
                 "node": "compose_response",
                 "llm_call": {
+                    "provider": provider.provider_name,
                     "model": response.model,
+                    "execution_mode": (
+                        "mock" if provider.provider_name == "mock" else "real_llm"
+                    ),
                     "prompt_tokens": response.usage.get("prompt_tokens", 0),
                     "completion_tokens": response.usage.get("completion_tokens", 0),
                     "latency_ms": elapsed_ms,
+                    "real_llm_success": provider.provider_name != "mock",
+                    "structured_output_failed": bool(
+                        response.metadata.get("structured_output_failed", False)
+                    ),
+                    "fallback_used": provider_fallback,
+                    "fallback_reason": response.metadata.get("fallback_reason"),
                 },
+                "routing_decision": "response_route:llm",
             })
             if response.content:
                 try:
                     parsed = json.loads(response.content)
-                    state["response_text"] = parsed.get("response", "")
+                    response_text = parsed.get("response")
+                    if not isinstance(response_text, str) or not response_text.strip():
+                        raise ValueError("Invalid structured response payload")
+                    state["response_text"] = response_text
                     # PendingActionBuilder for write proposals
-                    if parsed.get("propose_action"):
+                    if (
+                        parsed.get("propose_action")
+                        and state.get("request_mode") == "ACTION"
+                        and not state.get("confirm_action_id")
+                    ):
                         pa_data = parsed["propose_action"]
                         intent = pa_data.get("intent", state.get("intent", "OTHER"))
                         items_spec = pa_data.get("items", [])
-                        description = pa_data.get("description", "")
+                        description = (
+                            pa_data.get("description")
+                            or f"为您创建{intent}工单"
+                        )
                         order_ctx = _get_order_context(state)
                         if order_ctx and items_spec:
                             pending = build_pending_action(
@@ -71,27 +95,36 @@ async def compose_response(state: AgentState) -> AgentState:
                                 state["proposed_actions"] = [
                                     build_proposed_action_response(pending)
                                 ]
-                                state.setdefault("_pending_action_for_snapshot", pending)
+                                state["_pending_action_for_snapshot"] = pending
                             else:
                                 state["proposed_actions"] = []
                         else:
                             state["proposed_actions"] = []
                     else:
                         state["proposed_actions"] = []
+                    _ensure_explicit_action_proposal(state)
                     return _finalize_response(state)
                 except (json.JSONDecodeError, KeyError):
                     # Non-JSON response — use content as-is
                     state["response_text"] = response.content or ""
                     state["proposed_actions"] = []
                     return _finalize_response(state)
-        except Exception:
+        except Exception as exc:
             fallback_used = True
+            fallback_reason = type(exc).__name__
 
         if fallback_used:
             state.setdefault("node_timings", []).append({
                 "node": "compose_response",
-                "fallback": True,
-                "reason": "LLM call failed, using template",
+                "llm_call": {
+                    "provider": provider.provider_name,
+                    "execution_mode": "fallback",
+                    "real_llm_success": False,
+                    "structured_output_failed": True,
+                    "fallback_used": True,
+                    "fallback_reason": fallback_reason,
+                },
+                "routing_decision": "response_route:fallback_template",
             })
 
     # ── Template fallback ──────────────────────────────────────────
@@ -109,6 +142,7 @@ async def _llm_compose(state: AgentState, provider: Any) -> Any:
     """Call LLM to generate response and propose actions."""
     results = state.get("tool_results") or []
     intent = state.get("intent", "OTHER")
+    request_mode = state.get("request_mode", "INFORMATION")
     confirm = state.get("confirm_action_id")
 
     # Build context summary from tool results
@@ -124,12 +158,17 @@ async def _llm_compose(state: AgentState, provider: Any) -> Any:
         "Generate a helpful, natural Chinese response based on the tool results. "
         "Respond with JSON: {\"response\": \"...\", \"propose_action\": null or {\"intent\": \"...\", \"items\": [{\"product_name\": \"...\", \"quantity\": N, \"reason_code\": \"...\"}], \"description\": \"...\"}}. "
         "Only propose an action (propose_action) if the user clearly needs a refund/exchange/reshipment and has NOT yet confirmed one. "
+        "Before confirmation, clearly say that the operation is waiting for user confirmation; never claim it has already been accepted, submitted, or completed. "
+        "A CONSULTATION must never propose an action, create a ticket, or imply execution. "
+        "For policy answers, use only the supplied policy results and distinguish legal_requirement from company_policy. "
+        "If no policy result exists, say that the current active policy database cannot confirm the answer. "
         "If confirm_action_id was already used, do NOT propose another action."
     )
 
     user_prompt = (
         f"User message: {state['user_message']}\n"
         f"Detected intent: {intent}\n"
+        f"Request mode: {request_mode}\n"
         f"Confirm action ID: {confirm or 'none'}\n"
         f"Tool results:\n{context_str}\n\n"
         "Generate a JSON response with a natural Chinese reply and optionally a proposed action."
@@ -140,7 +179,7 @@ async def _llm_compose(state: AgentState, provider: Any) -> Any:
             ChatMessage(role="system", content=system_prompt),
             ChatMessage(role="user", content=user_prompt),
         ],
-        max_tokens=1024,
+        max_tokens=2048,
         temperature=0.3,
     )
     return await provider.chat_structured(request, {
@@ -148,22 +187,27 @@ async def _llm_compose(state: AgentState, provider: Any) -> Any:
         "properties": {
             "response": {"type": "string"},
             "propose_action": {
-                "type": "object",
-                "properties": {
-                    "intent": {"type": "string"},
-                    "items": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "product_name": {"type": "string"},
-                                "quantity": {"type": "integer"},
-                                "reason_code": {"type": "string"},
+                "anyOf": [
+                    {
+                        "type": "object",
+                        "properties": {
+                            "intent": {"type": "string"},
+                            "items": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "product_name": {"type": "string"},
+                                        "quantity": {"type": "integer"},
+                                        "reason_code": {"type": "string"},
+                                    },
+                                },
                             },
+                            "description": {"type": "string"},
                         },
                     },
-                    "description": {"type": "string"},
-                },
+                    {"type": "null"},
+                ],
             },
         },
         "required": ["response"],
@@ -172,12 +216,12 @@ async def _llm_compose(state: AgentState, provider: Any) -> Any:
 
 def _template_compose(state: AgentState) -> None:
     """Template-based fallback response generation."""
+    state["proposed_actions"] = []
     results = state.get("tool_results") or []
     success_results = [r for r in results if r.get("is_success")]
     failed_results = [r for r in results if not r.get("is_success")]
     response_parts: list[str] = []
 
-    intent = state.get("intent", "OTHER")
     confirm = state.get("confirm_action_id")
 
     if confirm and state.get("pending_action_valid"):
@@ -211,12 +255,24 @@ def _template_compose(state: AgentState) -> None:
     else:
         order_info = None
         logistics_info = None
+        policy_info: list[dict] = []
         for r in success_results:
             raw = r.get("raw_data", {})
             if r["tool_name"] == "get_order":
                 order_info = raw
             elif r["tool_name"] == "get_logistics":
                 logistics_info = raw
+            elif r["tool_name"] == "search_after_sales_policy":
+                policy_info = (r.get("data") or {}).get("policies") or []
+
+        if state.get("request_mode") == "CONSULTATION":
+            if policy_info:
+                response_parts.append(_policy_fallback_response(policy_info))
+            else:
+                response_parts.append(
+                    "当前有效政策库中没有检索到足够依据，我暂时无法确认该规则。"
+                    "建议联系人工客服核实，避免误导您。"
+                )
 
         if order_info:
             status_map = {
@@ -236,26 +292,7 @@ def _template_compose(state: AgentState) -> None:
             if carrier and tracking:
                 response_parts.append(f"物流信息：{carrier} {tracking}。")
 
-        # Flow B: Propose write action if appropriate (template fallback)
-        if intent in ("QUALITY_REFUND", "PRE_SHIP_REFUND", "MISSING_PARTS", "EXCHANGE") \
-                and not confirm and order_info is not None:
-            ctx_order: dict = cast(dict, order_info)
-            items_raw: Any = ctx_order.get("items", [])
-            if items_raw:
-                pa_template: dict | None = build_pending_action(
-                    intent=intent,
-                    order_context=ctx_order,
-                    items_spec=[{
-                        "product_name": items_raw[0].get("product_name", ""),
-                        "quantity": 1,
-                        "reason_code": "DAMAGED" if intent == "QUALITY_REFUND" else "OTHER",
-                    }],
-                    description=f"为您创建{intent}工单",
-                )
-                if pa_template:
-                    pa_template["description"] = f"为您创建{intent}工单"
-                    state["_pending_action_for_snapshot"] = pa_template
-                    state["proposed_actions"] = [build_proposed_action_response(pa_template)]
+        _ensure_explicit_action_proposal(state)
 
     if failed_results:
         response_parts.append("部分查询暂时不可用，请稍后重试。")
@@ -264,6 +301,50 @@ def _template_compose(state: AgentState) -> None:
         response_parts.append("请问还有什么可以帮您的？")
 
     state["response_text"] = "\n".join(response_parts)
+
+
+def _ensure_explicit_action_proposal(state: AgentState) -> None:
+    """Build a no-side-effect proposal for an unambiguous action request."""
+    intent = state.get("intent", "OTHER")
+    if (
+        state.get("proposed_actions")
+        or state.get("request_mode") != "ACTION"
+        or intent not in (
+            "QUALITY_REFUND", "PRE_SHIP_REFUND", "MISSING_PARTS", "EXCHANGE",
+        )
+        or state.get("confirm_action_id")
+    ):
+        return
+
+    order = _get_order_context(state)
+    if order is None:
+        return
+    items: Any = order.get("items", [])
+    if not items:
+        return
+    description = f"为您创建{intent}工单"
+    pending = build_pending_action(
+        intent=intent,
+        order_context=order,
+        items_spec=[{
+            "product_name": items[0].get("product_name", ""),
+            "quantity": 1,
+            "reason_code": (
+                "DAMAGED"
+                if intent == "QUALITY_REFUND"
+                and any(
+                    marker in state.get("user_message", "")
+                    for marker in ("质量", "损坏", "坏了", "破损")
+                )
+                else "OTHER"
+            ),
+        }],
+        description=description,
+    )
+    if pending:
+        pending["description"] = description
+        state["_pending_action_for_snapshot"] = pending
+        state["proposed_actions"] = [build_proposed_action_response(pending)]
 
 
 def _terminal_error_message(code: str) -> str:
@@ -276,6 +357,22 @@ def _terminal_error_message(code: str) -> str:
         "RESOURCE_NOT_FOUND": "未找到相关资源，请检查信息是否正确。",
     }
     return messages.get(code, "抱歉，处理请求时遇到问题，请稍后重试。")
+
+
+def _policy_fallback_response(policies: list[dict]) -> str:
+    """Compose a grounded fallback using only retrieved ACTIVE policy text."""
+    lines = ["根据当前有效政策库："]
+    for policy in policies[:3]:
+        title = policy.get("title", "相关政策")
+        text = policy.get("content_summary") or policy.get("snippet") or ""
+        source_label = (
+            "法律规则" if policy.get("source") == "legal_requirement"
+            else "ResolveAI 内部运营规则"
+        )
+        if text:
+            lines.append(f"- 《{title}》（{source_label}）：{text}")
+    lines.append("若您要立即办理退货或退款，请明确告诉我“请帮我申请”。")
+    return "\n".join(lines)
 
 
 def _build_citations(state: AgentState) -> list[dict]:
@@ -297,6 +394,7 @@ def _build_citations(state: AgentState) -> list[dict]:
                 "category": p.get("category", ""),
                 "snippet": p.get("snippet", ""),
                 "similarity_score": p.get("similarity_score", 0.0),
+                "source": p.get("source", ""),
             })
         return citations
     return []

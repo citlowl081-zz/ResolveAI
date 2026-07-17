@@ -36,4 +36,20 @@ test.describe("Admin Web E2E", () => {
     await page.goto("/tool-logs");
     await page.waitForLoadState("networkidle");
   });
+
+  test("ticket detail route renders ticket data", async ({ page }) => {
+    await page.route("**/api/v1/admin/after-sales/tickets/ticket-1", async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, code: "OK", data: {
+          id: "ticket-1", ticket_number: "TKT-TEST-1", order_id: "order-1",
+          intent: "QUALITY_REFUND", status: "APPROVED", version: 1,
+        } }),
+      });
+    });
+    await page.goto("/tickets/ticket-1");
+    await expect(page.getByRole("heading", { name: "TKT-TEST-1" })).toBeVisible();
+    await expect(page.getByText("QUALITY_REFUND")).toBeVisible();
+  });
 });

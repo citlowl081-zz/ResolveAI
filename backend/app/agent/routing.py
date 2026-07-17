@@ -17,6 +17,8 @@ def route_after_load_session(state: AgentState) -> str:
 
 
 def route_after_classify_intent(state: AgentState) -> str:
+    if state.get("pending_action_valid"):
+        return "select_tools"
     confidence = state.get("confidence")
     if confidence is not None and confidence >= 0.6:
         return "select_tools"
@@ -47,8 +49,6 @@ def route_after_execute_tool(state: AgentState) -> str:
 
 
 def route_after_handle_tool_error(state: AgentState) -> str:
-    loop_count = state.get("loop_count", 0)
-    max_loops = state.get("max_loops", 3)
-    if loop_count < max_loops:
+    if state.get("retry_tool_execution", False):
         return "execute_tool"
     return "compose_response"

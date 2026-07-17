@@ -108,6 +108,7 @@ export interface Citation {
   category: string;
   snippet: string;
   similarity_score: number;
+  source?: string;
 }
 
 export interface AgentMessage {

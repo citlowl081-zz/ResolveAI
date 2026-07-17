@@ -350,5 +350,6 @@ class TicketService:
             "order_id": str(ticket.order_id),
             "intent": ticket.intent.value if hasattr(ticket.intent, 'value') else str(ticket.intent),
             "status": ticket.status.value if hasattr(ticket.status, 'value') else str(ticket.status),
+            "version": ticket.version,
             "created_at": ticket.created_at.isoformat() if ticket.created_at else None,
         }

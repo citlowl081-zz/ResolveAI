@@ -62,6 +62,9 @@ def project_for_llm(tool_name: str, raw: dict) -> dict:
             "items": [project_ticket_for_llm(t) for t in r.get("items", [])],
             "total": r.get("total"), "page": r.get("page"),
         },
+        "search_after_sales_policy": lambda r: {
+            "policies": [project_policy_for_llm(p) for p in r.get("policies", [])],
+        },
     }
     projector = projections.get(tool_name)
     if projector is not None:
@@ -72,7 +75,7 @@ def project_for_llm(tool_name: str, raw: dict) -> dict:
 # Fields to KEEP when sending policy data to the LLM
 POLICY_LLM_FIELDS = frozenset({
     "policy_key", "title", "category", "content_summary",
-    "snippet", "similarity_score", "version",
+    "snippet", "similarity_score", "version", "source",
 })
 
 

@@ -14,13 +14,17 @@ from app.services.ticket import TicketService
 async def execute_tool(state: AgentState) -> AgentState:
     state["current_node"] = "execute_tool"
     authorized = state.get("authorized_tools") or []
-    state.setdefault("node_timings", []).append({
+    trace_timing = {
         "node": "execute_tool",
         "tool_calls_summary": [
-            {"tool_name": t["tool_name"], "tool_input": t.get("tool_input", {})}
+            {
+                "selected_tool": t["tool_name"],
+                "policy_search_executed": False,
+            }
             for t in authorized
         ],
-    })
+    }
+    state.setdefault("node_timings", []).append(trace_timing)
     user_id = uuid.UUID(state["user_id"])
     session_id = uuid.UUID(state["session_id"])
     turn_id = uuid.UUID(state["turn_id"])
@@ -66,7 +70,7 @@ async def execute_tool(state: AgentState) -> AgentState:
             })
 
             # Non-retryable errors: set terminal
-            if code in ("RESOURCE_NOT_FOUND", "BUSINESS_CONFLICT",
+            if code in ("RESOURCE_NOT_FOUND", "BUSINESS_CONFLICT", "CONFLICT",
                         "TOOL_FORBIDDEN", "INVALID_TOOL_ARGUMENTS"):
                 state["terminal_error"] = True
                 state["terminal_error_code"] = code
@@ -111,6 +115,17 @@ async def execute_tool(state: AgentState) -> AgentState:
                 await log_session.commit()
         except Exception:
             pass  # Tool log write failure should not break the main flow
+
+    trace_timing["tool_calls_summary"] = [
+        {
+            "selected_tool": result["tool_name"],
+            "policy_search_executed": (
+                result["tool_name"] == "search_after_sales_policy"
+                and result["is_success"]
+            ),
+        }
+        for result in results
+    ]
 
     state["tool_results"] = results
     return state
@@ -179,5 +194,12 @@ async def _execute_single_tool(
             )
             await session.commit()
             return result
+        elif tool_name == "search_after_sales_policy":
+            from app.tools.definitions.search_after_sales_policy import (
+                SearchAfterSalesPolicyTool,
+            )
+            return await SearchAfterSalesPolicyTool().execute(
+                session, tool_input, user_id,
+            )
         else:
             raise ValueError(f"Unknown tool: {tool_name}")

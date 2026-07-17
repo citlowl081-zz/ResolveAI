@@ -10,6 +10,8 @@ export default function MemoriesPage() {
   const [type, setType] = useState("PREFERENCE");
   const [content, setContent] = useState("");
   const [key, setKey] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingContent, setEditingContent] = useState("");
 
   async function load() {
     setLoading(true);
@@ -31,6 +33,15 @@ export default function MemoriesPage() {
 
   async function remove(id: string) {
     try { await memories.delete(id); load(); } catch (e: unknown) { alert(e instanceof Error ? e.message : "删除失败"); }
+  }
+
+  async function update(id: string) {
+    if (!editingContent.trim()) return;
+    try {
+      await memories.update(id, { content: editingContent });
+      setEditingId(null); setEditingContent("");
+      load();
+    } catch (e: unknown) { alert(e instanceof Error ? e.message : "修改失败"); }
   }
 
   return (
@@ -63,10 +74,22 @@ export default function MemoriesPage() {
                   {m.key && <span className="text-xs text-gray-400 font-mono">{m.key}</span>}
                   <span className="text-xs text-gray-400">v{m.version}</span>
                 </div>
-                <p className="text-sm">{m.content}</p>
+                {editingId === m.id ? (
+                  <textarea aria-label="修改记忆内容" value={editingContent} onChange={e => setEditingContent(e.target.value)} rows={2} className="w-full px-3 py-2 border rounded" />
+                ) : <p className="text-sm">{m.content}</p>}
                 <p className="text-xs text-gray-400 mt-1">来源: {m.source} | 置信度: {(m.confidence * 100).toFixed(0)}%</p>
               </div>
-              <button onClick={() => remove(m.id)} className="text-red-400 hover:text-red-600 text-sm">删除</button>
+              <div className="flex gap-3 ml-4">
+                {editingId === m.id ? (
+                  <>
+                    <button onClick={() => update(m.id)} className="text-green-600 hover:text-green-700 text-sm">保存修改</button>
+                    <button onClick={() => setEditingId(null)} className="text-gray-500 hover:text-gray-700 text-sm">取消</button>
+                  </>
+                ) : (
+                  <button onClick={() => { setEditingId(m.id); setEditingContent(m.content); }} className="text-blue-500 hover:text-blue-700 text-sm">修改</button>
+                )}
+                <button onClick={() => remove(m.id)} className="text-red-400 hover:text-red-600 text-sm">删除</button>
+              </div>
             </div>
           ))}
         </div>

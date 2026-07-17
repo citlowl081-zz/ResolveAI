@@ -243,7 +243,7 @@ class TestModelProviderIntegration:
 
         # Should be a structured call with low temperature
         assert classify_req.temperature == 0.0
-        assert classify_req.max_tokens == 256
+        assert classify_req.max_tokens == 2048
 
     async def test_compose_response_calls_mock_provider(
         self, async_client: AsyncClient, admin_auth: dict, monkeypatch: Any,

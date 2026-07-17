@@ -32,6 +32,7 @@ class AgentState(TypedDict):
     intent: str | None
     confidence: float | None
     extracted_entities: dict | None
+    request_mode: str | None             # CONSULTATION | ACTION | INFORMATION
 
     # ── Tools ──
     planned_tools: list[dict] | None
@@ -57,6 +58,7 @@ class AgentState(TypedDict):
     loop_count: int
     max_loops: int
     max_tools_per_turn: int
+    retry_tool_execution: bool
     errors: list[dict]
     injection_detected: bool
     terminal_error: bool
