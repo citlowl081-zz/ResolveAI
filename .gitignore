@@ -13,6 +13,7 @@ credentials/
 
 # ---- Python ----
 __pycache__/
+**/__pycache__/
 *.py[cod]
 *.pyo
 *.egg-info/
@@ -33,15 +34,26 @@ htmlcov/
 dmypy.json
 venv/
 .venv/
+**/.venv/
 env/
 .env-*
 
 # ---- Node / Next.js ----
 node_modules/
+**/node_modules/
 .next/
+**/.next/
 out/
 *.tsbuildinfo
-.next/
+
+# ---- Local AI tooling ----
+.agents/
+.codex/
+.claude/*.ipynb
+
+# ---- Browser test artifacts ----
+**/test-results/
+**/playwright-report/
 
 # ---- IDE ----
 .idea/

@@ -2,6 +2,8 @@
 
 A full-stack demonstration of an LLM-based intelligent after-sales service agent built with LangGraph, FastAPI, PostgreSQL+pgvector, and Next.js. **Designed as a portfolio project for AI Agent engineering roles.**
 
+**Current release target:** v1.0.1
+
 ## What It Does
 
 A customer chats with an AI agent about an e-commerce order. The agent:
@@ -42,7 +44,7 @@ Customer: "Remember I prefer Alipay for refunds"
 | RAG | pgvector exact cosine similarity, Chinese-friendly chunking |
 | Frontend | Next.js 14, TypeScript, Tailwind CSS |
 | Mini Program | WeChat Native (TypeScript) |
-| Testing | pytest (468 tests), Playwright E2E (15 specs) |
+| Testing | pytest (525 tests), Playwright E2E (22 tests) |
 | Deployment | Docker, Docker Compose |
 
 ## Quick Start (Local Demo)
@@ -164,7 +166,7 @@ ResolveAI/
 │   │   ├── rag/           # Embedding, chunking, ingestion
 │   │   └── security/      # JWT, RBAC, password hashing
 │   ├── alembic/           # 7 migrations (001–007)
-│   └── tests/             # 468 tests (unit + integration + eval)
+│   └── tests/             # 525 tests (unit + integration + eval)
 ├── frontend/
 │   ├── customer-web/      # Next.js 14 customer portal (13 routes)
 │   └── admin-web/         # Next.js 14 admin dashboard (9 routes)
@@ -177,8 +179,8 @@ ResolveAI/
 
 ## Testing & Evaluation
 
-- **468 backend tests** (pytest, 0 failures)
-- **15 Playwright E2E specs** (all passing)
+- **525 backend tests** (pytest, 0 failures)
+- **22 Playwright E2E tests** (Customer 14 + Admin 8, all passing)
 - **RAG metrics:** HitRate@5=0.952, Precision@1=0.667, MRR=0.775, zero fabrication
 - **Memory:** Write Accuracy 1.000, False-Write Avoidance 0.833
 - **Security:** 14 RBAC/IDOR/PII tests passing

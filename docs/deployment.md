@@ -60,6 +60,9 @@ cd frontend/admin-web && npx playwright test
 
 ## Cloud Deployment Options
 
+These are deployment examples only. ResolveAI is not currently claimed as
+publicly deployed.
+
 ### Option A: Fly.io (Recommended — simplest)
 ```bash
 # Backend

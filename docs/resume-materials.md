@@ -2,7 +2,7 @@
 
 ## One-Line Project Description
 
-Built a full-stack AI after-sales agent with LangGraph state machine, pgvector RAG policy retrieval, human-in-the-loop approval, and multi-session memory — 468 tests, 52 API endpoints, 3 frontend apps.
+Built a full-stack AI after-sales agent with LangGraph state machine, pgvector RAG policy retrieval, human-in-the-loop approval, and multi-session memory — 525 tests, 52 API endpoints, 3 frontend apps.
 
 ## 3 Key Contributions
 
@@ -14,7 +14,7 @@ Built a full-stack AI after-sales agent with LangGraph state machine, pgvector R
 
 ## 3 Project Highlights
 
-1. **468 backend tests, 0 failures** — comprehensive coverage across unit, integration, E2E business scenarios, security, concurrency, and performance.
+1. **525 backend tests, 0 failures** — comprehensive coverage across unit, integration, E2E business scenarios, security, concurrency, and performance.
 
 2. **Production-grade patterns** — optimistic locking, idempotency keys, short transaction boundaries, data minimization for LLM calls, PII stripping in logs, non-root Docker users.
 
@@ -28,7 +28,7 @@ Python 3.12 · FastAPI · LangGraph · SQLAlchemy 2 (async) · Pydantic 2 · Pos
 
 | Metric | Value |
 |---|---|
-| Backend tests | 468 (0 failures) |
+| Backend tests | 525 (0 failures) |
 | API endpoints | 52 |
 | Database tables | 20 |
 | LangGraph nodes | 9 |
@@ -36,7 +36,7 @@ Python 3.12 · FastAPI · LangGraph · SQLAlchemy 2 (async) · Pydantic 2 · Pos
 | RAG MRR | 0.775 |
 | Citation fabrication | 0.000 |
 | Memory write accuracy | 1.000 |
-| Playwright E2E specs | 15 (all passing) |
+| Playwright E2E tests | 22 (Customer 14 + Admin 8, all passing) |
 | Frontend apps | 3 (Customer + Admin + Mini Program) |
 | Frontend routes | 34 total |
 
@@ -45,13 +45,13 @@ Python 3.12 · FastAPI · LangGraph · SQLAlchemy 2 (async) · Pydantic 2 · Pos
 **ResolveAI — AI-Powered E-Commerce After-Sales Agent**
 - Built full-stack AI agent with LangGraph (9-node state machine), FastAPI backend (52 endpoints), and 3 frontend apps (Next.js + WeChat).
 - Implemented pgvector RAG policy retrieval (HitRate@5=0.952), human-in-the-loop approval with optimistic locking, and multi-session memory system.
-- 468 backend tests (0 failures), 15 Playwright E2E specs, Docker Compose deployment with zero API key setup for demo.
+- 525 backend tests (0 failures), 22 Playwright E2E tests, Docker Compose demo with zero API key setup in the default mock configuration.
 
 ## Interview Self-Introduction (60 seconds)
 
 "I built ResolveAI, a full-stack AI after-sales agent for e-commerce. The core is a 9-node LangGraph state machine that classifies user intent, retrieves relevant policies via pgvector semantic search, and proposes actions like refunds or exchanges. The LLM handles natural language understanding, but all calculations, eligibility checks, and state validations are done by deterministic Python code — the LLM never computes money or bypasses business rules.
 
-High-risk operations go through a human-in-the-loop approval system with optimistic locking to prevent double-approval. The agent maintains long-term memory across sessions so it remembers customer preferences. I built the entire system end-to-end — the Python backend with 52 API endpoints, two Next.js frontends, a WeChat mini program, and a comprehensive test suite with 468 tests all passing. The whole thing runs in Docker Compose and uses mock LLM/embedding providers so you can see the complete demo without any API keys."
+High-risk operations go through a human-in-the-loop approval system with optimistic locking to prevent double-approval. The agent maintains long-term memory across sessions so it remembers customer preferences. I built the entire system end-to-end — the Python backend with 52 API endpoints, two Next.js frontends, a WeChat mini program, and a comprehensive test suite with 525 tests all passing. The whole thing runs in Docker Compose with mock providers by default, while an optional local demo can use Qwen through an OpenAI-compatible API."
 
 ## What NOT to Claim
 

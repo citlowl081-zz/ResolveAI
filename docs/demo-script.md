@@ -71,8 +71,8 @@ docker compose up -d
 4. `ApprovalTaskRepository.decide()` — optimistic locking SQL
 
 ### Testing & Quality (2 min)
-- 468 backend tests (0 failures)
-- 15 Playwright E2E specs (all passing)
+- 525 backend tests (0 failures)
+- 22 Playwright E2E tests (Customer 14 + Admin 8, all passing)
 - RAG: HitRate@5=0.952, MRR=0.775
 - Memory: Write Accuracy 1.0, False-Write Avoidance 0.833
 
@@ -84,9 +84,9 @@ docker compose up -d
 - [ ] Admin Web (http://localhost:3001)
 - [ ] 10 demo products seeded
 - [ ] 3 demo orders (DELIVERED, PAID, SHIPPED)
-- [ ] 14 policies ingested with embeddings
+- [ ] 24 policies ingested with embeddings
 - [ ] Demo agent session exists
-- [ ] Mock LLM provider configured
+- [ ] Mock LLM provider configured for the default demo, or local Qwen credentials configured for the optional real-model demo
 
 ## Screenshot Checklist
 

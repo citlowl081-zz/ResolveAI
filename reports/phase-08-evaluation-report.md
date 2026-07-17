@@ -15,8 +15,9 @@
 | Concurrency | 4 | 4 | 0 |
 | Performance | 6 | 6 | 0 |
 | RAG evaluation | 4 | 4 | 0 |
-| **Total (pytest)** | **468** | **468** | **0** |
-| Playwright E2E (local) | 15 | 15 | 0 |
+| v1.0.1 regression additions | 57 | 57 | 0 |
+| **Total (pytest)** | **525** | **525** | **0** |
+| Playwright E2E (local) | 22 | 22 | 0 |
 
 ## Agent Evaluation Metrics
 
@@ -31,7 +32,7 @@
 | Memory Write Accuracy | 1.000 (6/6) | ≥ 0.80 | ✅ |
 | Memory False-Write Avoidance Rate | 0.833 (5/6) | ≥ 0.80 | ✅ |
 | Memory False Write Rate | 0.167 (1/6) | ≤ 0.20 | ✅ |
-| Tool Execution Success Rate | 1.000 | Verified by 468 tests | ✅ |
+| Tool Execution Success Rate | 1.000 | Verified by 525 tests | ✅ |
 
 ## HITL Metrics
 
@@ -138,9 +139,9 @@
 
 | App | Specs | Passed | Failed | Duration |
 |---|---|---|---|---|
-| Customer Web | 8 | 8 | 0 | 5.9s |
-| Admin Web | 7 | 7 | 0 | 9.1s |
-| **Total** | **15** | **15** | **0** | **15.0s** |
+| Customer Web | 14 | 14 | 0 | 7.6s |
+| Admin Web | 8 | 8 | 0 | 5.3s |
+| **Total** | **22** | **22** | **0** | **12.9s** |
 
 ### Customer Web Results
 
@@ -150,10 +151,17 @@
 | register page loads | ✅ | 264ms |
 | home page redirects to login when unauthenticated | ✅ | 825ms |
 | agent page loads | ✅ | 838ms |
+| unauthenticated agent redirects to login | ✅ | verified |
+| authenticated agent access | ✅ | verified |
+| policy citation without confirmation | ✅ | verified |
+| explicit action confirmation flow | ✅ | verified |
 | products page renders | ✅ | 821ms |
 | orders page renders | ✅ | 841ms |
+| order detail logistics endpoint | ✅ | verified |
 | approvals page renders | ✅ | 829ms |
 | memories page renders | ✅ | 829ms |
+| memory edit flow | ✅ | verified |
+| ticket cancellation idempotency key | ✅ | verified |
 
 ### Admin Web Results
 
@@ -166,6 +174,7 @@
 | policies page renders | ✅ | 833ms |
 | traces page renders | ✅ | 834ms |
 | tool-logs page renders | ✅ | 822ms |
+| ticket detail route renders | ✅ | verified |
 
 ## Known Limitations
 
@@ -180,10 +189,10 @@
 |---|---|
 | pip check | ✅ PASS |
 | ruff check app/ tests/ | ✅ PASS (0 errors) |
-| mypy --no-incremental app/ tests/ | ✅ PASS (205 files, 0 errors) |
-| pytest (468 tests) | ✅ PASS (0 failures) |
+| mypy --no-incremental app/ tests/ | ✅ PASS (216 files, 0 errors) |
+| pytest (525 tests) | ✅ PASS (0 failures) |
 | alembic downgrade -1 → upgrade head | ✅ PASS |
 | customer-web build | ✅ PASS |
 | admin-web build | ✅ PASS |
-| Playwright customer-web | ✅ 8/8 passed (5.9s) |
-| Playwright admin-web | ✅ 7/7 passed (9.1s) |
+| Playwright customer-web | ✅ 14/14 passed (7.6s) |
+| Playwright admin-web | ✅ 8/8 passed (5.3s) |

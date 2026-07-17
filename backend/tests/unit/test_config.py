@@ -11,7 +11,7 @@ def test_settings_defaults() -> None:
 
     s = Settings.model_construct()
     assert s.app_name == "ResolveAI"
-    assert s.app_version == "0.1.0"
+    assert s.app_version == "1.0.1"
     assert s.app_env == "development"
     assert s.debug is True
     assert s.postgres_host == "localhost"

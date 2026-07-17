@@ -7,14 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Planned
-- Phase 03: Agent tools (tool definitions, execution, logging)
-- Phase 04: RAG knowledge base (policy ingestion, pgvector retrieval)
-- Phase 05: Memory system (short-term, long-term, business state)
-- Phase 06: Human approval system
-- Phase 07: Frontend (customer web + admin web)
-- Phase 08: Evaluation framework
-- Phase 09: Docker deployment
+### Release target
+- v1.0.1
+
+### Added
+- Secure OpenAI-compatible Qwen provider for optional local real-model demos.
+- Expanded after-sales policy knowledge base with structured citations and official-source notes.
+
+### Fixed
+- Separated policy consultation from explicit after-sales action requests.
+- Connected policy search through the existing Agent tool path.
+- Hardened pending-action confirmation, approval execution, and idempotency.
+- Corrected Customer Web logistics requests and idempotent demo logistics seeding.
+
+### Validation
+- 525 backend tests passed.
+- Customer Playwright: 14 passed.
+- Admin Playwright: 8 passed.
+- Default CI and clone demo remain on mock providers; real Qwen credentials stay in local `.env` or deployment secrets.
 
 ## [0.2.0] — 2026-07-14
 

@@ -2,17 +2,17 @@
 
 **Date:** 2026-07-15
 **Generated:** After Phase 07A completion
-**Updated:** Phase 07A COMPLETE — Customer Web (10 pages) + Admin Web (8 pages) with full API integration
+**Updated:** v1.0.1 release preparation after complete local verification
 
 ---
 
 ## Current Phase
 
-**Phase 07A — Customer Web & Admin Web: COMPLETE**
+**Release target: v1.0.1**
 
 Phase 09 is complete. Project is READY FOR DEMO / PORTFOLIO.
 Key deliverables: Docker Compose (4 services, one-command start), CI/CD pipeline (ruff+mypy+pytest+frontend builds+docker), demo seed data with env accounts, complete README with architecture diagrams, 5-min + 10-min demo scripts, deployment guide, resume materials.
-468 backend tests (0 failures), 15 Playwright E2E specs, 3 Dockerfiles, 52 API endpoints, 34 frontend routes across 3 apps.
+525 backend tests (0 failures), 22 Playwright E2E tests (Customer 14 + Admin 8), 3 Dockerfiles, 52 API endpoints, 34 frontend routes across 3 apps.
 Next: commit, push, verify CI, and prepare for portfolio presentation.
 
 ---
@@ -48,7 +48,7 @@ Next: commit, push, verify CI, and prepare for portfolio presentation.
 - 16 new integration tests (49 total), CI green
 
 ### Phase 03 — Agent Tools
-- **LangGraph:** 9 nodes with declarative routing. ModelProvider ABC (AnthropicProvider + MockProvider). classify_intent and compose_response use LLM primary path with keyword/template fallback.
+- **LangGraph:** 9 nodes with declarative routing. ModelProvider ABC supports MockProvider, AnthropicProvider, and OpenAICompatibleProvider. CI/demo defaults to mock; optional local real-model demos use Qwen.
 - **Tools:** 7 customer-facing tools wrapping Phase 02 Services. Write tools via pending_action→confirm_action_id. allowed_roles={UserRole.CUSTOMER}.
 - **Database:** 4 new tables (agent_sessions, agent_messages, agent_tool_logs, agent_traces) + 2 enums. Migration 004 with active_turn CHECK constraint.
 - **Turn Lifecycle:** 6 active_turn_* columns. Atomic acquisition + atomic release (TX-B only). RECOVERABLE_INTERRUPTION preserves turn identity. STATE_CORRUPTION handled.
@@ -69,7 +69,7 @@ ResolveAI/
 ├── backend/               # Python FastAPI backend (unified API server)
 │   ├── app/
 │   │   ├── agent/          # LangGraph state machine (9 nodes)
-│   │   ├── llm/            # ModelProvider ABC + Anthropic + Mock
+│   │   ├── llm/            # ModelProvider ABC + Mock + Anthropic + OpenAI-compatible Qwen
 │   │   ├── tools/          # 7 customer-facing Agent tools
 │   │   ├── api/v1/         # 41 API endpoints total
 │   │   ├── models/         # 16 SQLAlchemy models

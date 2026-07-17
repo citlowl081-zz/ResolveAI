@@ -36,6 +36,6 @@ async def health_check(db: AsyncSession = _GetDB) -> APIResponse[dict[str, Any]]
         data={
             "status": "healthy",
             "database": db_status,
-            "version": "0.1.0",
+            "version": "1.0.1",
         },
     )
