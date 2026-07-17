@@ -60,8 +60,10 @@ class SearchAfterSalesPolicyTool(BaseTool):
         category = tool_input.get("category")
         top_k = tool_input.get("top_k", 5)
 
-        bind = session.get_bind()
-        factory = async_sessionmaker(bind, class_=AsyncSession, expire_on_commit=False)  # type: ignore[call-overload]
+        bind = session.bind
+        if bind is None:
+            raise RuntimeError("Policy search requires a bound AsyncSession")
+        factory = async_sessionmaker(bind, class_=AsyncSession, expire_on_commit=False)
         provider = build_embedding_provider()
         svc = PolicyService(session_factory=factory, embedding_provider=provider)
 

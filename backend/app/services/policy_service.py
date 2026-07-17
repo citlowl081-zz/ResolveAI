@@ -19,6 +19,18 @@ from app.repositories.policy_document import PolicyDocumentRepository
 from app.services.audit import AuditService
 
 
+def _expand_policy_query(query: str) -> str:
+    """Add policy vocabulary for common customer synonyms before embedding."""
+    hints: list[str] = []
+    if any(term in query for term in ("少发", "少件", "漏件", "错发")):
+        hints.append("少件 漏件 错发 补发")
+    if any(term in query for term in ("耳机", "耳麦")):
+        hints.append("耳机 数码产品 拆封 合理试用 商品完好 七日无理由")
+    if any(term in query for term in ("衣服", "衣物", "试穿")):
+        hints.append("服装 试穿 合理试用 商品完好 退货")
+    return f"{query} {' '.join(hints)}".strip()
+
+
 class PolicyService:
     """Service for policy retrieval and lifecycle management."""
 
@@ -41,7 +53,7 @@ class PolicyService:
     ) -> list[dict]:
         if self._embedding.dimension != 1536:
             raise RuntimeError("Embedding dimension mismatch")
-        query_vector = await self._embedding.embed_query(query)
+        query_vector = await self._embedding.embed_query(_expand_policy_query(query))
         async with self._session_factory() as session:
             repo = PolicyChunkRepository(session)
             return await repo.search_similar(

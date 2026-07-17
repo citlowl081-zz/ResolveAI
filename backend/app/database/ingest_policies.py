@@ -32,6 +32,11 @@ async def main() -> None:
     )
     results = await ingester.ingest_all(activate=True)
     total = len(results)
+    failed = sorted(key for key, status in results.items() if status == "error")
+    if failed:
+        raise RuntimeError(
+            f"IngestPolicies: failed to ingest {len(failed)} file(s): {failed}"
+        )
     logger.info("IngestPolicies: %d policy files processed", total)
 
 

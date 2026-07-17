@@ -87,6 +87,7 @@ class PolicyChunkRepository(BaseRepository):
                 pd.title,
                 pd.category::text,
                 pd.content_summary,
+                pd.source,
                 pc.content AS snippet,
                 pc.chunk_index,
                 1 - (pc.embedding <=> '{vec_str}'::vector) AS similarity_score

@@ -166,6 +166,9 @@ class PolicyIngestionService:
                     if active is not None:
                         active.status = PolicyStatus.SUPERSEDED
                         active.superseded_by = doc.id
+                        # Preserve the partial unique ACTIVE index by making
+                        # the old version non-active before activating the new one.
+                        await session_c.flush()
                     doc.status = PolicyStatus.ACTIVE
                     status = "ACTIVE"
 
@@ -223,9 +226,31 @@ def _parse_policy_file(path: Path) -> dict[str, Any]:
     metadata.setdefault("metadata_filter", {})
     metadata.setdefault("expiration_date", None)
 
+    source = metadata["source"]
+    if isinstance(source, dict):
+        source_details = _json_safe_metadata(source)
+        filters = dict(metadata["metadata_filter"] or {})
+        filters["source_details"] = source_details
+        metadata["metadata_filter"] = filters
+        authority = str(source_details.get("issuing_authority", ""))
+        metadata["source"] = (
+            "company_policy" if "ResolveAI" in authority else "legal_requirement"
+        )
+
     # content_summary: auto-generate if empty
     if not metadata.get("content_summary"):
         cleaned = " ".join(body.split())[:200]
         metadata["content_summary"] = cleaned
 
     return metadata
+
+
+def _json_safe_metadata(value: Any) -> Any:
+    """Normalize YAML date values before hashing or storing JSONB metadata."""
+    if isinstance(value, date):
+        return value.isoformat()
+    if isinstance(value, dict):
+        return {key: _json_safe_metadata(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_json_safe_metadata(item) for item in value]
+    return value

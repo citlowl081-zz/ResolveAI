@@ -2,6 +2,7 @@
 
 import uuid
 from collections.abc import AsyncGenerator
+from pathlib import Path
 
 import pytest_asyncio
 from httpx import AsyncClient
@@ -9,17 +10,48 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.config.settings import settings
+from app.rag.ingestion import PolicyIngestionService, _parse_policy_file
+from app.rag.mock_embeddings import MockEmbeddingProvider
 
-_ENGINE = create_async_engine(
-    settings.resolved_database_url, pool_size=2, max_overflow=2, pool_pre_ping=True,
-)
+
+def test_structured_source_metadata_is_normalized(tmp_path: Path) -> None:
+    policy = tmp_path / "POL-RET-999.md"
+    policy.write_text(
+        """---
+policy_key: POL-RET-999
+title: 测试政策
+category: RETURN
+effective_date: 2025-01-01
+source:
+  document: 法律文件
+  issuing_authority: 全国人大
+  accessed: 2026-07-16
+---
+# 正文
+政策内容。
+""",
+        encoding="utf-8",
+    )
+
+    parsed = _parse_policy_file(policy)
+
+    assert parsed["source"] == "legal_requirement"
+    assert parsed["metadata_filter"]["source_details"]["document"] == "法律文件"
+    assert parsed["metadata_filter"]["source_details"]["accessed"] == "2026-07-16"
 
 
 @pytest_asyncio.fixture
 async def db_session() -> AsyncGenerator[AsyncSession, None]:
-    factory = async_sessionmaker(_ENGINE, class_=AsyncSession, expire_on_commit=False)
+    engine = create_async_engine(
+        settings.resolved_database_url,
+        pool_size=2,
+        max_overflow=2,
+        pool_pre_ping=True,
+    )
+    factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     async with factory() as session:
         yield session
+    await engine.dispose()
 
 
 @pytest_asyncio.fixture(autouse=True)
@@ -187,6 +219,55 @@ class TestAdminPolicyCRUD:
 
 
 class TestIngestion:
+    async def test_changed_active_policy_is_replaced_atomically(
+        self, tmp_path: Path,
+    ) -> None:
+        policy = tmp_path / "POL-RET-998.md"
+        policy.write_text(
+            """---
+policy_key: POL-RET-998
+title: 原政策
+category: RETURN
+effective_date: 2025-01-01
+---
+# 原政策
+原始内容。
+""",
+            encoding="utf-8",
+        )
+        engine = create_async_engine(
+            settings.resolved_database_url,
+            pool_size=2,
+            max_overflow=2,
+            pool_pre_ping=True,
+        )
+        factory = async_sessionmaker(
+            engine, class_=AsyncSession, expire_on_commit=False,
+        )
+        ingester = PolicyIngestionService(
+            session_factory=factory,
+            embedding_provider=MockEmbeddingProvider(),
+            policies_dir=tmp_path,
+        )
+        try:
+            first = await ingester.ingest_file(policy, activate=True)
+            policy.write_text(
+                policy.read_text(encoding="utf-8").replace("原始内容", "修订内容"),
+                encoding="utf-8",
+            )
+            second = await ingester.ingest_file(policy, activate=True)
+            async with factory() as session:
+                active_count = await session.scalar(text(
+                    "SELECT count(*) FROM policy_documents "
+                    "WHERE policy_key = 'POL-RET-998' AND status = 'ACTIVE'"
+                ))
+        finally:
+            await engine.dispose()
+
+        assert first["version"] == 1
+        assert second["version"] == 2
+        assert active_count == 1
+
     async def test_ingest_all_policies(
         self, async_client: AsyncClient,
     ) -> None:
@@ -198,6 +279,7 @@ class TestIngestion:
         assert r.status_code == 200
         report = r.json()["data"]["report"]
         assert len(report) >= 14
+        assert "error" not in report.values()
 
     async def test_ingest_then_search(
         self, async_client: AsyncClient,
@@ -211,10 +293,19 @@ class TestIngestion:
         # Search from the service layer — best effort check that data exists
         from app.rag.embeddings import build_embedding_provider
         from app.services.policy_service import PolicyService
-        factory = async_sessionmaker(_ENGINE, class_=AsyncSession, expire_on_commit=False)
+        engine = create_async_engine(
+            settings.resolved_database_url,
+            pool_size=2,
+            max_overflow=2,
+            pool_pre_ping=True,
+        )
+        factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
         provider = build_embedding_provider()
         svc = PolicyService(session_factory=factory, embedding_provider=provider)
-        results = await svc.search("退款", top_k=3)
+        try:
+            results = await svc.search("退款", top_k=3)
+        finally:
+            await engine.dispose()
         assert len(results) >= 1
 
 
