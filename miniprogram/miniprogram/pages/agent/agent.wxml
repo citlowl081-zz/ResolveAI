@@ -1,45 +1,87 @@
-<view class="container" style="display:flex;flex-direction:column;height:100vh;padding:0">
-  <scroll-view scroll-y style="flex:1;padding:24rpx" scroll-into-view="msg-{{messages.length-1}}">
-    <block wx:if="{{messages.length===0}}">
-      <view style="text-align:center;padding:120rpx 0;color:#9ca3af">
-        <view style="font-size:60rpx;margin-bottom:20rpx">🤖</view>
-        <view style="font-size:32rpx;margin-bottom:12rpx">欢迎使用智能客服</view>
-        <view class="text-sm">您可以询问订单、物流、退款和售后问题</view>
-      </view>
-    </block>
-    <view wx:for="{{messages}}" wx:key="index" id="msg-{{index}}" style="margin-bottom:24rpx">
-      <view style="display:flex;flex-direction:{{item.role==='user'?'row-reverse':'row'}}">
-        <view style="max-width:80%;padding:18rpx 24rpx;border-radius:16rpx;font-size:28rpx;
-          {{item.role==='user'?'background:#2563eb;color:#fff':'background:#fff;border:1rpx solid #e5e7eb'}}">
-          <text>{{item.content}}</text>
-          <!-- Citations -->
-          <view wx:if="{{item.citations && item.citations.length}}" style="margin-top:12rpx;padding-top:12rpx;border-top:1rpx solid #e5e7eb">
-            <text style="font-weight:600;font-size:22rpx;color:#6b7280">📋 政策引用:</text>
-            <view wx:for="{{item.citations}}" wx:key="policy_key" wx:for-item="c" style="font-size:22rpx;color:#6b7280;margin-top:6rpx">
-              <text style="font-family:monospace;background:#f3f4f6;padding:2rpx 8rpx;border-radius:4rpx">{{c.policy_key}}</text> v{{c.version}} — {{c.title}}
-            </view>
+<view class="agent-page">
+  <view class="chat-header">
+    <button class="header-button" bindtap="toggleSessions"><text class="button-icon">◷</text>历史</button>
+    <view class="agent-heading"><text class="agent-title">AI 售后助手</text></view>
+    <button class="header-button primary" bindtap="startNewSession"><text class="button-icon">＋</text>新对话</button>
+  </view>
+
+  <view wx:if="{{showSessions}}" class="drawer-layer">
+    <view class="drawer-mask" bindtap="toggleSessions"></view>
+    <view class="session-drawer">
+      <view class="drawer-heading"><text>历史会话</text><button bindtap="toggleSessions">关闭</button></view>
+      <view class="session-note">历史会话来自服务器，仅当前账号可见。</view>
+      <scroll-view class="drawer-scroll" scroll-y>
+        <view wx:if="{{sessions.length===0}}" class="empty-small">暂无历史会话</view>
+        <view wx:for="{{sessions}}" wx:key="session_id" class="session-item {{item.session_id===sessionId?'active':''}}" data-id="{{item.session_id}}" bindtap="chooseSession">
+          <view class="session-title">{{item.title}}</view>
+          <view class="session-meta">{{item.updatedText}} · {{item.message_count}} 条消息</view>
+          <view class="session-preview">{{item.last_message_preview}}</view>
+        </view>
+      </scroll-view>
+    </view>
+  </view>
+
+  <scroll-view class="message-scroll" scroll-y enable-flex scroll-into-view="message-bottom">
+    <view wx:if="{{historyLoading && messages.length===0}}" class="loading-text">正在加载历史消息...</view>
+    <view wx:elif="{{messages.length===0}}" class="welcome-card">
+      <view class="welcome-icon">AI</view>
+      <view class="welcome-title">欢迎使用 ResolveAI 智选商城 AI 售后助手</view>
+      <view class="text-sm text-gray">可以询问订单、物流、退款与售后政策问题</view>
+    </view>
+    <view wx:for="{{messages}}" wx:key="message_id" id="msg-{{index}}" class="message-row {{item.role==='user'?'user':'assistant'}}">
+      <view class="message-bubble {{item.role==='user'?'user-bubble':'assistant-bubble'}}">
+        <text user-select>{{item.content}}</text>
+        <view wx:if="{{item.role==='user' && item.delivery_status!=='sent'}}" class="delivery-status">
+          <text wx:if="{{item.delivery_status==='sending'}}">正在发送</text>
+          <text wx:elif="{{item.delivery_status==='retrying'}}">正在重试</text>
+          <view wx:elif="{{item.delivery_status==='failed'}}">
+            <text>发送失败</text>
+            <button class="retry-button" data-id="{{item.client_message_id}}" bindtap="retry">重新发送</button>
           </view>
-          <!-- Proposed Action -->
-          <view wx:if="{{item.action}}" style="margin-top:12rpx;padding:12rpx;background:#dbeafe;border-radius:8rpx;font-size:24rpx">
-            <text style="font-weight:600;color:#1d4ed8">📌 待确认: {{item.action.description}}</text>
+        </view>
+        <view wx:if="{{item.hasCitations}}" class="citation-list">
+          <view class="section-label">政策引用</view>
+          <view wx:for="{{item.citations}}" wx:key="policy_key" wx:for-item="citation" class="citation-card">
+            <view><text class="policy-key">{{citation.policy_key}}</text> v{{citation.version}}</view>
+            <view>{{citation.title}}</view>
           </view>
-          <!-- PENDING_APPROVAL -->
-          <view wx:if="{{item.approval}}" style="margin-top:12rpx;padding:12rpx;background:#fef9c3;border-radius:8rpx;font-size:24rpx">
-            <text style="font-weight:600;color:#a16207">⏳ 等待人工审批</text>
-            <text style="color:#a16207">类型: {{item.approval.approval_type}} | 状态: {{item.approval.status}}</text>
-          </view>
+        </view>
+        <view wx:if="{{item.action}}" class="action-card">
+          <view class="section-label">待确认操作</view>
+          <view>{{item.action.description}}</view>
+        </view>
+        <view wx:if="{{item.approval}}" class="approval-card">
+          <view class="section-label">等待人工审批</view>
+          <view>状态：{{item.approval.status}}</view>
         </view>
       </view>
     </view>
+    <view wx:if="{{sending}}" class="message-row assistant">
+      <view class="message-bubble assistant-bubble waiting-card">
+        <view>AI 正在分析你的问题…</view>
+        <view class="text-sm text-gray">已等待 {{waitSeconds}} 秒</view>
+      </view>
+    </view>
+    <view wx:if="{{pendingMemory}}" class="memory-suggestion">
+      <view class="section-label">是否保存为服务偏好？</view>
+      <view>{{pendingMemory.content}}</view>
+      <view wx:if="{{pendingMemory.status==='saved'}}" class="text-green mt-2">已保存到服务偏好</view>
+      <view wx:else class="memory-actions">
+        <button class="small-button primary" bindtap="confirmMemory" disabled="{{pendingMemory.status==='saving'}}">{{pendingMemory.status==='saving'?'正在保存':'记住这条偏好'}}</button>
+        <button class="small-button" bindtap="dismissMemory">暂不保存</button>
+      </view>
+      <view wx:if="{{pendingMemory.status==='failed'}}" class="text-red text-sm">{{pendingMemory.error}}</view>
+    </view>
+    <view wx:if="{{historyError}}" class="inline-error">{{historyError}}</view>
+    <view id="message-bottom"></view>
   </scroll-view>
-  <!-- Confirm/Cancel bar -->
-  <view wx:if="{{pendingAction}}" style="padding:16rpx 24rpx;display:flex;gap:16rpx;background:#fff;border-top:1rpx solid #e5e7eb">
-    <button bindtap="confirm" style="flex:1;background:#16a34a;color:#fff;border-radius:12rpx;font-size:28rpx">确认执行</button>
-    <button bindtap="decline" style="flex:1;background:#e5e7eb;color:#374151;border-radius:12rpx;font-size:28rpx">取消</button>
+
+  <view wx:if="{{pendingAction}}" class="confirm-bar">
+    <button class="confirm-button" bindtap="confirm" disabled="{{sending}}">确认执行</button>
+    <button class="cancel-button" bindtap="decline" disabled="{{sending}}">取消</button>
   </view>
-  <!-- Input bar -->
-  <view style="padding:16rpx 24rpx;background:#fff;border-top:1rpx solid #e5e7eb;display:flex;gap:12rpx">
-    <input value="{{input}}" bindinput="onInput" placeholder="输入您的问题..." style="flex:1;padding:16rpx;border:1rpx solid #e5e7eb;border-radius:12rpx;font-size:28rpx" confirm-type="send" bindconfirm="doSend" />
-    <button bindtap="doSend" disabled="{{!input||sending}}" style="padding:16rpx 24rpx;background:#2563eb;color:#fff;border-radius:12rpx;font-size:28rpx">{{sending?'...':'发送'}}</button>
+  <view class="composer">
+    <input class="message-input" value="{{input}}" bindinput="onInput" placeholder="输入订单、物流或售后问题" confirm-type="send" bindconfirm="doSend" />
+    <button class="send-button" bindtap="doSend" disabled="{{!input||sending}}">发送</button>
   </view>
 </view>

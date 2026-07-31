@@ -1,0 +1,21 @@
+name: resolveai-test
+
+services:
+  db-test:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: resolveai_test
+      POSTGRES_USER: resolveai_test
+      POSTGRES_PASSWORD: resolveai-test-only
+    ports:
+      - "5433:5432"
+    volumes:
+      - test_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U resolveai_test -d resolveai_test"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+
+volumes:
+  test_pgdata:

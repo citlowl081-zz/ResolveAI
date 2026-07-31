@@ -1,11 +1,25 @@
-<view class="container" style="padding-top:80rpx">
-  <view style="text-align:center;margin-bottom:50rpx"><text style="font-size:40rpx;font-weight:bold">注册</text></view>
-  <input class="input" placeholder="姓名" bindinput="onName" value="{{name}}" />
-  <input class="input" placeholder="邮箱" bindinput="onEmail" value="{{email}}" />
-  <input class="input" placeholder="密码(至少6位)" bindinput="onPwd" value="{{password}}" type="password" />
-  <view wx:if="{{error}}" class="error-text">{{error}}</view>
-  <button class="btn btn-primary" bindtap="register" loading="{{loading}}">注册</button>
-  <view style="text-align:center;margin-top:30rpx">
-    <navigator url="/pages/login/login" style="color:#2563eb">已有账号？立即登录</navigator>
+<view class="auth-page auth-page--compact">
+  <view class="auth-shell">
+    <view class="auth-brand">
+      <text class="auth-brand__title">创建账号</text>
+      <view class="auth-brand__subtitle">加入 ResolveAI 智选商城</view>
+    </view>
+    <view class="auth-form">
+      <view class="auth-field {{focusedField == 'name' ? 'auth-field--focused' : ''}}">
+        <input class="auth-input" aria-label="姓名" placeholder="姓名" placeholder-class="auth-placeholder" bindinput="onName" bindfocus="onFocus" bindblur="onBlur" data-field="name" value="{{name}}" confirm-type="next" cursor-spacing="28" />
+      </view>
+      <view class="auth-field {{focusedField == 'email' ? 'auth-field--focused' : ''}}">
+        <input class="auth-input" aria-label="邮箱" placeholder="邮箱" placeholder-class="auth-placeholder" bindinput="onEmail" bindfocus="onFocus" bindblur="onBlur" data-field="email" value="{{email}}" confirm-type="next" cursor-spacing="28" />
+      </view>
+      <view class="auth-field {{focusedField == 'password' ? 'auth-field--focused' : ''}}">
+        <input class="auth-input" aria-label="密码" placeholder="密码" placeholder-class="auth-placeholder" bindinput="onPwd" bindfocus="onFocus" bindblur="onBlur" data-field="password" value="{{password}}" type="password" confirm-type="next" cursor-spacing="28" />
+      </view>
+      <view class="auth-field {{focusedField == 'confirmPassword' ? 'auth-field--focused' : ''}}">
+        <input class="auth-input" aria-label="确认密码" placeholder="确认密码" placeholder-class="auth-placeholder" bindinput="onConfirmPwd" bindfocus="onFocus" bindblur="onBlur" data-field="confirmPassword" value="{{confirmPassword}}" type="password" confirm-type="done" cursor-spacing="28" />
+      </view>
+      <view wx:if="{{error}}" class="auth-error">{{error}}</view>
+      <button class="auth-submit" bindtap="register" loading="{{loading}}" disabled="{{loading}}">注册</button>
+      <view class="auth-link">已有账号？<navigator class="auth-link__action" url="/pages/login/login">返回登录</navigator></view>
+    </view>
   </view>
 </view>

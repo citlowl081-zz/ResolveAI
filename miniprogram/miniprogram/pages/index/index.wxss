@@ -1,0 +1,32 @@
+.home-page { min-height: 100vh; padding: 28rpx 24rpx 52rpx; box-sizing: border-box; background: #f5f7fa; }
+.home-top { width: 100%; max-width: 920rpx; margin: 0 auto; }
+.brand-row { display: flex; align-items: center; justify-content: space-between; }
+.brand-name { color: #1f2937; font-size: 38rpx; font-weight: 700; }
+.brand-welcome { margin-top: 6rpx; color: #667085; font-size: 24rpx; }
+.brand-mark { display: flex; align-items: center; justify-content: center; width: 64rpx; height: 64rpx; border-radius: 18rpx; background: #2f6bee; color: #fff; font-size: 30rpx; font-weight: 700; }
+.search-box { display: flex; align-items: center; height: 80rpx; margin-top: 24rpx; padding: 0 26rpx; border: 1rpx solid #e5e7eb; border-radius: 16rpx; background: #fff; }
+.search-icon { margin-right: 16rpx; color: #2f6bee; font-size: 24rpx; font-weight: 700; }
+.search-box input { min-width: 0; flex: 1; height: 100%; font-size: 29rpx; }
+.search-placeholder { color: #98a2b3; font-size: 28rpx; }
+.category-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16rpx; width: 100%; max-width: 920rpx; margin: 30rpx auto; }
+.category-item { min-width: 0; padding: 18rpx 8rpx; border: 1rpx solid #e5e7eb; border-radius: 16rpx; background: #fff; color: #475467; text-align: center; font-size: 23rpx; box-sizing: border-box; }
+.category-icon { display: flex; align-items: center; justify-content: center; width: 66rpx; height: 66rpx; margin: 0 auto 10rpx; border-radius: 18rpx; background: #eef3ff; color: #2f6bee; font-size: 25rpx; font-weight: 700; }
+.home-banner { display: flex; align-items: center; justify-content: space-between; width: 100%; max-width: 872rpx; margin: 0 auto; padding: 30rpx 24rpx; border: 1rpx solid #dbe5ff; border-radius: 20rpx; background: #eef3ff; box-sizing: border-box; }
+.banner-kicker { color: #2f6bee; font-size: 22rpx; font-weight: 600; }
+.banner-title { margin-top: 8rpx; color: #1f2937; font-size: 32rpx; font-weight: 700; }
+.banner-desc { margin-top: 7rpx; color: #667085; font-size: 23rpx; }
+.banner-action { flex: none; padding: 14rpx 18rpx; border-radius: 12rpx; background: #2f6bee; color: #fff; font-size: 24rpx; }
+.section-heading { display: flex; align-items: center; justify-content: space-between; width: 100%; max-width: 920rpx; margin: 38rpx auto 18rpx; color: #1f2937; font-size: 31rpx; font-weight: 700; }
+.section-heading navigator { color: #667085; font-size: 24rpx; font-weight: 400; }
+.product-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16rpx; width: 100%; max-width: 920rpx; margin: 0 auto; }
+.product-card { min-width: 0; padding: 16rpx; border: 1rpx solid #e5e7eb; border-radius: 18rpx; background: #fff; box-sizing: border-box; }
+.product-image { display: flex; align-items: center; justify-content: center; aspect-ratio: 1 / 1; border-radius: 14rpx; background: #eef2f7; color: #98a2b3; font-size: 24rpx; }
+.product-name { display: -webkit-box; min-height: 76rpx; overflow: hidden; margin-top: 14rpx; color: #1f2937; font-size: 27rpx; font-weight: 600; line-height: 1.4; text-overflow: ellipsis; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.product-meta { margin-top: 6rpx; color: #98a2b3; font-size: 22rpx; }
+.product-price { margin-top: 10rpx; color: #2f6bee; font-size: 29rpx; font-weight: 700; }
+.ai-entry { display: flex; align-items: center; gap: 18rpx; width: 100%; max-width: 872rpx; margin: 38rpx auto 0; padding: 22rpx 24rpx; border: 1rpx solid #dbe5ff; border-radius: 18rpx; background: #fff; box-sizing: border-box; }
+.ai-mark { display: flex; flex: none; align-items: center; justify-content: center; width: 62rpx; height: 62rpx; border-radius: 16rpx; background: #2f6bee; color: #fff; font-size: 24rpx; font-weight: 700; }
+.ai-copy { min-width: 0; flex: 1; color: #1f2937; font-size: 28rpx; font-weight: 600; }
+.ai-copy text { display: block; margin-top: 5rpx; color: #667085; font-size: 22rpx; font-weight: 400; }
+.ai-arrow { color: #98a2b3; font-size: 42rpx; }
+@media (max-width: 340px) { .category-grid { gap: 12rpx; } .category-item { padding-right: 4rpx; padding-left: 4rpx; font-size: 22rpx; } }

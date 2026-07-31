@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import Navbar from "@/lib/navbar";
 import { afterSales, type Ticket } from "@/lib/api";
+import { labelFor, friendlyError } from "@/lib/labels";
 
 const STATUS_MAP: Record<string, string> = {
   APPROVED: "已通过", REJECTED: "已拒绝", COMPLETED: "已完成",
@@ -16,14 +17,14 @@ export default function TicketsPage() {
   useEffect(() => {
     afterSales.list().then(r => {
       if (r.success && r.data) setItems(r.data.items);
-    }).catch(e => setError(e.message)).finally(() => setLoading(false));
+    }).catch(e => setError(friendlyError(e))).finally(() => setLoading(false));
   }, []);
 
   async function cancelTicket(id: string, version: number) {
     try {
       await afterSales.cancel(id, version);
       setItems(prev => prev.map(t => t.id === id ? { ...t, status: "CANCELLED" } : t));
-    } catch (e: unknown) { setError(e instanceof Error ? e.message : "取消失败"); }
+    } catch (e: unknown) { setError(friendlyError(e)); }
   }
 
   return (
@@ -40,7 +41,7 @@ export default function TicketsPage() {
                 <span className="font-mono text-sm">{t.ticket_number}</span>
                 <span className="text-sm px-2 py-1 rounded bg-gray-100">{STATUS_MAP[t.status] || t.status}</span>
               </div>
-              <p className="text-sm text-gray-500 mt-1">类型: {t.intent}</p>
+              <p className="text-sm text-gray-500 mt-1">类型：{labelFor(t.intent)}</p>
               {t.reject_reason && <p className="text-sm text-red-500 mt-1">拒绝原因: {t.reject_reason}</p>}
               {t.status === "APPROVED" && (
                 <button onClick={() => cancelTicket(t.id, t.version)}

@@ -136,6 +136,7 @@ class AgentOrchestrator:
             "trace_sequence": 0,
             "pending_action": pending_action,
             "pending_action_valid": pending_action_valid,
+            "user_msg_sequence": preflight_result["user_msg_sequence"],
             "user_profile": None,
             "recent_orders": None,
             "pending_tickets": None,
@@ -278,6 +279,10 @@ class AgentOrchestrator:
             session_id=sess.id, turn_id=turn_id,
             role=MessageRole.USER.value, content=user_message,
             sequence_number=seq, turn_sequence=0,
+            message_metadata={
+                "client_message_id": idempotency_key,
+                "delivery_status": "sent",
+            },
         )
         await msg_repo.save(user_msg)
         await repo.update_message_count(sess.id, 1)
@@ -354,6 +359,10 @@ class AgentOrchestrator:
                 role=MessageRole.ASSISTANT.value,
                 content=f"抱歉，{message}",
                 sequence_number=seq, turn_sequence=100,
+                message_metadata={
+                    "trace_id": str(trace_id),
+                    "delivery_status": "sent",
+                },
             )
             await msg_repo.save(error_msg)
 
@@ -604,6 +613,12 @@ class AgentOrchestrator:
                 content=assistant_content,
                 sequence_number=seq + msgs_to_insert,
                 turn_sequence=100,
+                message_metadata={
+                    "citations": state.get("citations") or [],
+                    "proposed_actions": state.get("proposed_actions") or [],
+                    "trace_id": state["trace_id"],
+                    "delivery_status": "sent",
+                },
             )
             await msg_repo.save(final_msg)
             msgs_to_insert += 1

@@ -7,6 +7,7 @@ from app.api.v1 import (
     admin_after_sales,
     admin_agent,
     admin_approvals,
+    admin_console,
     admin_policies,
     admin_reshipments,
     after_sales,
@@ -33,4 +34,5 @@ v1_router.include_router(admin_after_sales.router)
 v1_router.include_router(admin_approvals.router)
 v1_router.include_router(admin_reshipments.router)
 v1_router.include_router(admin_agent.router)
+v1_router.include_router(admin_console.router)
 v1_router.include_router(admin_policies.router)

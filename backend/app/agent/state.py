@@ -20,6 +20,7 @@ class AgentState(TypedDict):
     trace_sequence: int
     pending_action: dict | None
     pending_action_valid: bool
+    user_msg_sequence: int
 
     # ── Context ──
     user_profile: dict | None

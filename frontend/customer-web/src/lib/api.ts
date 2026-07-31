@@ -19,6 +19,7 @@ export function loadTokens() {
     accessToken = localStorage.getItem("access_token");
     refreshToken = localStorage.getItem("refresh_token");
   }
+  return Boolean(accessToken && refreshToken);
 }
 
 export function clearTokens() {
@@ -69,24 +70,25 @@ async function request<T>(
   };
   if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
 
-  const res = await fetch(`${API_BASE}${path}`, {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  let res: Response;
+  try { res = await fetch(`${API_BASE}${path}`, { method, headers, body: body ? JSON.stringify(body) : undefined }); }
+  catch { throw new ApiError(0, "网络连接失败，请检查服务状态"); }
 
   if (res.status === 401 && !isRetry) {
     const refreshed = await refreshAccessToken();
     if (refreshed) return request<T>(method, path, body, true, extraHeaders);
     clearTokens();
     onAuthError?.();
-    throw new ApiError(401, "Authentication required");
+    throw new ApiError(401, "登录状态已过期，请重新登录");
   }
 
   const json = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const msg = json.message || json.detail || `Request failed: ${res.status}`;
-    throw new ApiError(res.status, typeof msg === "string" ? msg : JSON.stringify(msg));
+    const code = typeof json.code === "string" ? json.code : "";
+    const raw = typeof json.message === "string" ? json.message : "";
+    const messages: Record<number, string> = { 401: "登录状态已过期，请重新登录", 403: "当前账号无权限执行此操作", 404: "未找到对应数据", 409: "该操作已处理，请勿重复提交", 422: "提交内容不完整或格式不正确", 500: "系统暂时无法处理，请稍后重试" };
+    const message = code === "ACTION_ALREADY_CONSUMED" ? messages[409] : messages[res.status] || (raw && !/Request failed|Error \d+|CONFLICT|Internal Server Error/i.test(raw) ? raw : "系统暂时无法处理，请稍后重试");
+    throw new ApiError(res.status, message);
   }
   return json as T;
 }
@@ -111,10 +113,21 @@ export const auth = {
 
 // ── Products ──
 export const products = {
-  list: (page = 1, category?: string) => {
-    const params = new URLSearchParams({ page: String(page), page_size: "20" });
+  list: (page = 1, category?: string, pageSize = 20) => {
+    const params = new URLSearchParams({ page: String(page), page_size: String(pageSize) });
     if (category) params.set("category", category);
     return request<{ success: boolean; data: PaginatedResponse<Product> }>("GET", `/products?${params}`);
+  },
+  listAll: async () => {
+    const all: Product[] = [];
+    let page = 1;
+    let totalPages = 1;
+    do {
+      const response = await products.list(page, undefined, 100);
+      if (response.data) { all.push(...response.data.items); totalPages = response.data.total_pages; }
+      page += 1;
+    } while (page <= totalPages);
+    return all;
   },
   get: (id: string) => request<{ success: boolean; data: Product }>("GET", `/products/${id}`),
 };
@@ -150,22 +163,17 @@ export const afterSales = {
 
 // ── Agent ──
 export const agent = {
-  createSession: (message: string, idempotencyKey: string) =>
+  createSession: (message: string, clientMessageId: string) =>
     request<{ success: boolean; data: AgentResponse }>(
-      "POST", "/agent/sessions", { message }, false,
-      { "Idempotency-Key": idempotencyKey },
+      "POST", "/agent/sessions", { message, client_message_id: clientMessageId }, false,
+      { "Idempotency-Key": clientMessageId },
     ),
-  createSessionRaw: (message: string, idempotencyKey: string) =>
-    request<{ success: boolean; data: AgentResponse }>(
-      "POST", "/agent/sessions", { message }, false,
-      { "Idempotency-Key": idempotencyKey },
-    ),
-  sendMessage: (sessionId: string, message: string, confirmActionId: string | null, idempotencyKey: string) => {
-    const body: Record<string, unknown> = { message };
+  sendMessage: (sessionId: string, message: string, confirmActionId: string | null, clientMessageId: string) => {
+    const body: Record<string, unknown> = { message, client_message_id: clientMessageId };
     if (confirmActionId) body["confirm_action_id"] = confirmActionId;
     return request<{ success: boolean; data: AgentResponse }>(
       "POST", `/agent/sessions/${sessionId}/messages`, body, false,
-      { "Idempotency-Key": idempotencyKey },
+      { "Idempotency-Key": clientMessageId },
     );
   },
   listSessions: (page = 1) =>

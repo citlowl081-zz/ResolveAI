@@ -56,29 +56,37 @@ class TestBuildContextMemoryInjection:
 
 
 class TestComposeResponseMemoryDecisions:
-    async def test_explicit_remember_triggers_memory_write(
+    async def test_explicit_remember_waits_for_customer_confirmation(
         self, async_client: AsyncClient, customer_auth: dict,
     ) -> None:
-        """When user says '记住', compose_response should set memory_changes."""
-        # The orchestrator will persist memory_changes in TX-B
-        # We test this via the API — the turn should succeed
+        """A chat request alone must not silently create long-term memory."""
+        before = await async_client.get(
+            "/api/v1/memories", headers=customer_auth["headers"],
+        )
+        before_ids = {item["id"] for item in before.json()["data"]["items"]}
+
         resp = await async_client.post("/api/v1/agent/sessions", json={
-            "message": "记住我喜欢用支付宝退款",
+            "message": "请记住，我更倾向于换货而不是退款。",
         }, headers={
             **customer_auth["headers"],
             "Idempotency-Key": f"remember-{uuid.uuid4().hex}",
         })
         assert resp.status_code in (200, 201)
 
-        # After that turn, there should be a new memory
         mem_resp = await async_client.get(
             "/api/v1/memories", headers=customer_auth["headers"],
         )
         assert mem_resp.status_code == 200
-        memories = mem_resp.json()["data"]["items"]
-        # At least one memory should reference the preference
-        contents = [m["content"] for m in memories]
-        assert any("支付宝" in c for c in contents), f"Expected memory about 支付宝, got: {contents}"
+        after_ids = {item["id"] for item in mem_resp.json()["data"]["items"]}
+        assert after_ids == before_ids
+
+        confirmed = await async_client.post("/api/v1/memories", json={
+            "memory_type": "PREFERENCE",
+            "content": "更倾向于换货而不是退款",
+            "key": "after_sales_preference",
+            "source": "explicit_agent_confirmation",
+        }, headers=customer_auth["headers"])
+        assert confirmed.status_code == 201
 
     async def test_ordinary_chat_does_not_create_memory(
         self, async_client: AsyncClient, customer_auth: dict,

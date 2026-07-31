@@ -1,0 +1,12 @@
+.products-page { min-height: 100vh; padding: 28rpx 24rpx 54rpx; box-sizing: border-box; background: #f5f7fa; }
+.products-title { font-size: 36rpx; font-weight: 700; }
+.category-tabs { width: 100%; margin: 24rpx 0; white-space: nowrap; }
+.category-tab { display: inline-block; margin-right: 14rpx; padding: 13rpx 22rpx; border: 1rpx solid #e5e7eb; border-radius: 24rpx; background: #fff; color: #667085; font-size: 24rpx; }
+.category-tab.active { border-color: #2f6bee; background: #eaf0ff; color: #2f6bee; }
+.filter-note { margin-bottom: 20rpx; color: #667085; font-size: 24rpx; }
+.product-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16rpx; max-width: 920rpx; margin: 0 auto; }
+.product-card { min-width: 0; padding: 16rpx; border: 1rpx solid #e5e7eb; border-radius: 18rpx; background: #fff; box-sizing: border-box; }
+.product-placeholder { display: flex; align-items: center; justify-content: center; aspect-ratio: 1 / 1; border-radius: 14rpx; background: #eef2f7; color: #98a2b3; font-size: 24rpx; }
+.product-name { display: -webkit-box; min-height: 76rpx; overflow: hidden; margin-top: 14rpx; font-size: 27rpx; font-weight: 600; line-height: 1.4; text-overflow: ellipsis; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.product-category { margin-top: 6rpx; color: #98a2b3; font-size: 22rpx; }
+.product-price { margin-top: 10rpx; color: #2f6bee; font-size: 29rpx; font-weight: 700; }

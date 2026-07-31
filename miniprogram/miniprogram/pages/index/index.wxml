@@ -1,37 +1,52 @@
-<view class="container">
-  <view style="text-align:center;padding:40rpx 0">
-    <text style="font-size:36rpx;font-weight:bold">欢迎, {{userName}}</text>
+<view class="home-page">
+  <view class="home-top">
+    <view class="brand-row">
+      <view><view class="brand-name">ResolveAI 智选商城</view><view class="brand-welcome">你好，{{userName}}</view></view>
+      <view class="brand-mark">R</view>
+    </view>
+    <view class="search-box">
+      <text class="search-icon">搜</text>
+      <input value="{{search}}" bindinput="onSearchInput" bindconfirm="searchProducts" confirm-type="search" placeholder="搜索智能数码与桌面好物" placeholder-class="search-placeholder" />
+    </view>
   </view>
-  <view style="display:grid;grid-template-columns:1fr 1fr;gap:16rpx">
-    <navigator url="/pages/agent/agent" class="card" style="text-align:center">
-      <view style="font-size:48rpx;margin-bottom:10rpx">🤖</view>
-      <view style="font-weight:600">智能客服</view>
-      <view class="text-sm text-gray">AI 售后助手</view>
-    </navigator>
-    <navigator url="/pages/orders/orders" class="card" style="text-align:center">
-      <view style="font-size:48rpx;margin-bottom:10rpx">📦</view>
-      <view style="font-weight:600">我的订单</view>
-      <view class="text-sm text-gray">查看物流</view>
-    </navigator>
-    <navigator url="/pages/tickets/tickets" class="card" style="text-align:center">
-      <view style="font-size:48rpx;margin-bottom:10rpx">📋</view>
-      <view style="font-weight:600">售后服务</view>
-      <view class="text-sm text-gray">工单管理</view>
-    </navigator>
-    <navigator url="/pages/memories/memories" class="card" style="text-align:center">
-      <view style="font-size:48rpx;margin-bottom:10rpx">🧠</view>
-      <view style="font-weight:600">我的记忆</view>
-      <view class="text-sm text-gray">偏好管理</view>
-    </navigator>
-    <navigator url="/pages/approvals/approvals" class="card" style="text-align:center">
-      <view style="font-size:48rpx;margin-bottom:10rpx">⏳</view>
-      <view style="font-weight:600">审批状态</view>
-      <view class="text-sm text-gray">审核进度</view>
-    </navigator>
-    <navigator url="/pages/profile/profile" class="card" style="text-align:center">
-      <view style="font-size:48rpx;margin-bottom:10rpx">👤</view>
-      <view style="font-weight:600">个人中心</view>
-      <view class="text-sm text-gray">账号管理</view>
+
+  <view class="category-grid">
+    <navigator wx:for="{{categories}}" wx:key="key" url="/pages/products/products?category={{item.key}}" class="category-item">
+      <view class="category-icon">{{item.icon}}</view><view>{{item.label}}</view>
     </navigator>
   </view>
+
+  <view class="home-banner">
+    <view class="banner-copy"><view class="banner-kicker">桌面焕新</view><view class="banner-title">智能数码与办公精选</view><view class="banner-desc">真实商品目录，清晰售后政策</view></view>
+    <navigator url="/pages/products/products" class="banner-action">查看全部</navigator>
+  </view>
+
+  <view wx:if="{{loading}}" class="loading-text">正在加载商品...</view>
+  <view wx:elif="{{error}}" class="error-text">{{error}}</view>
+  <block wx:else>
+    <view class="section-heading"><text>精选推荐</text><navigator url="/pages/products/products">更多</navigator></view>
+    <view class="product-grid">
+      <navigator wx:for="{{recommended}}" wx:key="id" url="/pages/product-detail/product-detail?id={{item.id}}" class="product-card">
+        <view class="product-image">待上传商品图片</view><view class="product-name">{{item.name}}</view><view class="product-meta">{{item.categoryLabel}} · 库存 {{item.stock}}</view><view class="product-price">¥{{item.price}}</view>
+      </navigator>
+    </view>
+
+    <view class="section-heading"><text>热门商品</text></view>
+    <view class="product-grid">
+      <navigator wx:for="{{popular}}" wx:key="id" url="/pages/product-detail/product-detail?id={{item.id}}" class="product-card">
+        <view class="product-image">待上传商品图片</view><view class="product-name">{{item.name}}</view><view class="product-meta">{{item.categoryLabel}} · 库存 {{item.stock}}</view><view class="product-price">¥{{item.price}}</view>
+      </navigator>
+    </view>
+
+    <view class="section-heading"><text>新品上架</text></view>
+    <view class="product-grid">
+      <navigator wx:for="{{newItems}}" wx:key="id" url="/pages/product-detail/product-detail?id={{item.id}}" class="product-card">
+        <view class="product-image">待上传商品图片</view><view class="product-name">{{item.name}}</view><view class="product-meta">{{item.categoryLabel}} · 库存 {{item.stock}}</view><view class="product-price">¥{{item.price}}</view>
+      </navigator>
+    </view>
+  </block>
+
+  <navigator open-type="switchTab" url="/pages/agent/agent" class="ai-entry">
+    <view class="ai-mark">AI</view><view class="ai-copy"><view>售后问题，问问 AI</view><text>退换政策、物流与工单进度</text></view><text class="ai-arrow">›</text>
+  </navigator>
 </view>

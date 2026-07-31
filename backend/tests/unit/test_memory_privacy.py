@@ -45,6 +45,16 @@ class TestContainsSensitiveInfo:
         assert reason is not None
         assert "密码" in reason
 
+    def test_detects_verification_code(self) -> None:
+        reason = contains_sensitive_info("短信验证码：123456")
+        assert reason is not None
+        assert "验证码" in reason
+
+    def test_detects_health_privacy(self) -> None:
+        reason = contains_sensitive_info("诊断结果：需要长期服药")
+        assert reason is not None
+        assert "健康隐私" in reason
+
     def test_detects_detailed_address(self) -> None:
         reason = contains_sensitive_info("地址：北京市朝阳区某某街道某某路123号")
         assert reason is not None

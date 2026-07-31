@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Navbar from "@/lib/navbar";
 import { orders, logistics, type Order, type LogisticsInfo } from "@/lib/api";
+import { labelFor } from "@/lib/labels";
 
 const STATUS_MAP: Record<string, string> = {
   PENDING_PAYMENT: "待支付", PAID: "已支付", SHIPPED: "已发货",
@@ -58,7 +59,7 @@ export default function OrderDetailPage() {
               <div className="mt-4 p-4 bg-gray-50 rounded-lg">
                 <h3 className="font-semibold mb-2">物流信息</h3>
                 <p className="text-sm">{log.carrier}: {log.tracking_number}</p>
-                <p className="text-sm text-gray-500">状态: {log.status}</p>
+                <p className="text-sm text-gray-500">状态：{labelFor(log.status)}</p>
               </div>
             )}
           </div>

@@ -1,3 +1,7 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root { --shop-primary: #2563eb; --shop-ink: #0f172a; --shop-muted: #64748b; --shop-bg: #f8fafc; --shop-border: #e2e8f0; }
+body { color: var(--shop-ink); background: var(--shop-bg); }
+:focus-visible { outline: 2px solid var(--shop-primary); outline-offset: 2px; }

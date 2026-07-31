@@ -276,13 +276,16 @@ class TestMessageSequenceAndPersistence:
         }, headers={**auth["headers"], "Idempotency-Key": _idem_key()})
         session_id = resp.json()["data"]["session_id"]
 
-        msg_resp = await async_client.get(
-            f"/api/v1/agent/sessions/{session_id}/messages",
-            headers=auth["headers"],
-        )
-        messages = msg_resp.json()["data"]["items"]
-
-        turn_sequences = [m.get("turn_sequence") for m in messages if m.get("turn_sequence") is not None]
+        from app.database.session import _get_session_factory
+        async with _get_session_factory()() as db_session:
+            rows = await db_session.execute(
+                text(
+                    "SELECT turn_sequence FROM agent_messages "
+                    "WHERE session_id = :session_id ORDER BY sequence_number"
+                ),
+                {"session_id": session_id},
+            )
+            turn_sequences = [row[0] for row in rows.all()]
         # At minimum we should have turn_sequence=0 (USER) and turn_sequence=100 (final ASSISTANT)
         has_user = 0 in turn_sequences
         has_final = 100 in turn_sequences

@@ -57,6 +57,65 @@ class AgentMessageRepository:
         rows.reverse()
         return rows, total
 
+    async def list_customer_history(
+        self, session_id: uuid.UUID, page: int = 1, page_size: int = 50,
+        before_sequence: int | None = None,
+    ) -> tuple[list[AgentMessage], int]:
+        """Return only customer-visible messages in chronological page order."""
+        base = select(AgentMessage).where(
+            AgentMessage.session_id == session_id,
+            AgentMessage.role.in_(("USER", "ASSISTANT")),
+        )
+        if before_sequence is not None:
+            base = base.where(AgentMessage.sequence_number < before_sequence)
+        total = (await self.session.execute(
+            select(func.count()).select_from(base.subquery())
+        )).scalar() or 0
+        rows = list((await self.session.execute(
+            base.order_by(AgentMessage.sequence_number.desc())
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )).scalars().all())
+        rows.reverse()
+        return rows, total
+
+    async def get_first_user_message(
+        self, session_id: uuid.UUID,
+    ) -> AgentMessage | None:
+        result = await self.session.execute(
+            select(AgentMessage)
+            .where(
+                AgentMessage.session_id == session_id,
+                AgentMessage.role == "USER",
+            )
+            .order_by(AgentMessage.sequence_number.asc())
+            .limit(1)
+        )
+        return result.scalar_one_or_none()
+
+    async def get_last_customer_message(
+        self, session_id: uuid.UUID,
+    ) -> AgentMessage | None:
+        result = await self.session.execute(
+            select(AgentMessage)
+            .where(
+                AgentMessage.session_id == session_id,
+                AgentMessage.role.in_(("USER", "ASSISTANT")),
+            )
+            .order_by(AgentMessage.sequence_number.desc())
+            .limit(1)
+        )
+        return result.scalar_one_or_none()
+
+    async def count_customer_messages(self, session_id: uuid.UUID) -> int:
+        result = await self.session.execute(
+            select(func.count()).where(
+                AgentMessage.session_id == session_id,
+                AgentMessage.role.in_(("USER", "ASSISTANT")),
+            )
+        )
+        return result.scalar() or 0
+
     async def list_recent_for_context(
         self, session_id: uuid.UUID, limit: int = 50,
     ) -> list[AgentMessage]:

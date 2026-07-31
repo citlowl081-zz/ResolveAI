@@ -1,15 +1,33 @@
 <view class="container">
-  <view style="font-size:36rpx;font-weight:bold;margin-bottom:24rpx">审批状态</view>
-  <block wx:if="{{loading}}"><view class="loading-text">加载中...</view></block>
-  <block wx:elif="{{items.length===0}}"><view class="empty-text">暂无审批</view></block>
-  <view wx:for="{{items}}" wx:key="id" class="card">
+  <view class="page-title">我的审批</view>
+  <view class="page-subtitle">仅显示当前账号发起的高风险售后审批</view>
+  <view wx:if="{{loading}}" class="loading-text">正在加载...</view>
+  <view wx:elif="{{error}}" class="error-text">{{error}}</view>
+  <view wx:elif="{{items.length===0}}" class="empty-text">暂无审批记录</view>
+  <view wx:for="{{items}}" wx:key="id" class="card" data-id="{{item.id}}" bindtap="showDetail">
     <view class="flex-between">
-      <text class="text-sm text-gray">ID: {{item.id}}</text>
-      <text class="badge {{item.status==='PENDING'?'badge-yellow':item.status==='APPROVED'?'badge-green':'badge-red'}}">{{item.status}}</text>
+      <text class="text-sm text-gray">审批编号：{{item.id}}</text>
+      <text class="badge {{item.status==='PENDING'?'badge-yellow':item.status==='APPROVED'?'badge-green':'badge-red'}}">{{statusText[item.status] || item.status}}</text>
     </view>
-    <view class="text-sm mt-2">类型: {{item.approval_type}} | 操作: {{item.tool_name}}</view>
-    <view class="text-sm">风险: {{item.risk_level}}</view>
-    <view wx:if="{{item.reason}}" class="text-sm text-gray mt-2">原因: {{item.reason}}</view>
-    <view wx:if="{{item.decision_reason}}" class="text-sm text-gray mt-2">决定: {{item.decision_reason}}</view>
+    <view class="text-sm mt-2">操作：{{labelText[item.tool_name] || item.tool_name}}</view>
+    <view class="text-sm">风险等级：{{labelText[item.risk_level] || item.risk_level}}</view>
+    <view class="detail-link">查看详情</view>
+  </view>
+  <view wx:if="{{detailLoading || selected}}" class="modal-mask" bindtap="closeDetail">
+    <view class="detail-panel" catchtap="noop">
+      <view wx:if="{{detailLoading}}" class="loading-text">正在加载审批详情...</view>
+      <block wx:elif="{{selected}}">
+        <view class="flex-between"><view class="detail-title">审批详情</view><button class="close-button" bindtap="closeDetail">关闭</button></view>
+        <view class="detail-row"><text>审批编号</text><text selectable>{{selected.id}}</text></view>
+        <view class="detail-row"><text>关联会话</text><text selectable>{{selected.agent_session_id || '暂无'}}</text></view>
+        <view class="detail-row"><text>操作类型</text><text>{{labelText[selected.tool_name] || selected.tool_name}}</text></view>
+        <view class="detail-row"><text>风险等级</text><text>{{labelText[selected.risk_level] || selected.risk_level}}</text></view>
+        <view class="detail-row"><text>当前状态</text><text>{{statusText[selected.status] || selected.status}}</text></view>
+        <view class="detail-row"><text>创建时间</text><text>{{selected.created_at || '暂无'}}</text></view>
+        <view class="detail-row"><text>审批结果</text><text>{{selected.decision_reason || statusText[selected.status] || selected.status}}</text></view>
+        <view class="detail-row"><text>关联订单</text><text>客户接口未公开订单编号</text></view>
+        <view class="detail-row"><text>关联工单</text><text>审批执行后请在售后工单中查看</text></view>
+      </block>
+    </view>
   </view>
 </view>

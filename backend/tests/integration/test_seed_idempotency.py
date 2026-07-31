@@ -1,4 +1,4 @@
-"""Verify seed script idempotency — double execution produces stable data counts."""
+"""Verify demo seed idempotency and stable SKU identity."""
 
 from collections.abc import AsyncGenerator
 
@@ -8,8 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.config.settings import settings
 from app.database.engine import create_engine
+from app.database.seed import PRODUCTS, seed_agent_data
 from app.database.seed import main as run_seed
-from app.database.seed import seed_agent_data
 
 
 @pytest_asyncio.fixture
@@ -28,10 +28,11 @@ async def _count(session: AsyncSession, table: str) -> int:
 
 
 class TestSeedIdempotency:
-    """Run seed twice, verify data counts are stable."""
+    """Run seed repeatedly and verify the demo catalog remains stable."""
 
-    async def test_double_seed_stable_counts(self, db_session: AsyncSession) -> None:
-        # First run
+    async def test_triple_seed_stable_counts_and_skus(
+        self, db_session: AsyncSession,
+    ) -> None:
         await run_seed()
         await db_session.commit()
 
@@ -45,9 +46,15 @@ class TestSeedIdempotency:
             "agent_messages": await _count(db_session, "agent_messages"),
         }
 
-        # Second run (idempotent)
+        referenced_product = await db_session.execute(text(
+            "SELECT oi.product_id FROM order_items oi "
+            "JOIN orders o ON o.id = oi.order_id WHERE o.order_number = 'ORD-000001'"
+        ))
+        referenced_product_id = referenced_product.scalar_one()
+
         await run_seed()
-        await db_session.commit()
+        await run_seed()
+        db_session.expire_all()
 
         counts_2 = {
             "users": await _count(db_session, "users"),
@@ -60,7 +67,7 @@ class TestSeedIdempotency:
         }
 
         assert counts_1 == counts_2, (
-            f"Seed not idempotent:\n  Run 1: {counts_1}\n  Run 2: {counts_2}"
+            f"Seed not idempotent:\n  Run 1: {counts_1}\n  Run 3: {counts_2}"
         )
 
         # Verify minimum expected data
@@ -69,6 +76,27 @@ class TestSeedIdempotency:
         assert counts_1["orders"] >= 3, f"Expected >=3 orders, got {counts_1['orders']}"
         assert counts_1["logistics_records"] >= 1, f"Expected >=1 logistics, got {counts_1['logistics_records']}"
         assert counts_1["agent_sessions"] >= 1, f"Expected >=1 agent session, got {counts_1['agent_sessions']}"
+
+        demo_skus = [str(product["sku"]) for product in PRODUCTS]
+        sku_stats = await db_session.execute(text(
+            "SELECT COUNT(*), COUNT(DISTINCT sku), "
+            "COUNT(DISTINCT split_part(sku, '-', 2)) "
+            "FROM products WHERE is_active = TRUE AND sku = ANY(:skus)"
+        ), {"skus": demo_skus})
+        assert sku_stats.one() == (23, 23, 6)
+
+        duplicate_skus = await db_session.execute(text(
+            "SELECT COUNT(*) FROM ("
+            "SELECT sku FROM products WHERE sku = ANY(:skus) "
+            "GROUP BY sku HAVING COUNT(*) > 1) duplicate"
+        ), {"skus": demo_skus})
+        assert duplicate_skus.scalar_one() == 0
+
+        referenced_after = await db_session.execute(text(
+            "SELECT oi.product_id FROM order_items oi "
+            "JOIN orders o ON o.id = oi.order_id WHERE o.order_number = 'ORD-000001'"
+        ))
+        assert referenced_after.scalar_one() == referenced_product_id
 
         demo_logistics = await db_session.execute(text(
             "SELECT COUNT(*) FROM logistics_records l "

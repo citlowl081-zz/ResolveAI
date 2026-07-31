@@ -75,7 +75,7 @@ def _date_to_str(value: Any) -> Any:
     from datetime import date as date_type
     from datetime import datetime as dt_type
 
-    if isinstance(value, (date_type, dt_type)):
+    if isinstance(value, date_type | dt_type):
         return value.isoformat()
     return _or_empty(value)
 

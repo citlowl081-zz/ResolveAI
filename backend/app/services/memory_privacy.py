@@ -38,6 +38,16 @@ _PASSWORD_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
+_VERIFICATION_CODE_PATTERN = re.compile(
+    r"(?:验证码|短信码|动态码|otp)\s*[:：=]?\s*\d{4,8}",
+    re.IGNORECASE,
+)
+
+_HEALTH_PRIVACY_PATTERN = re.compile(
+    r"(?:病历|诊断结果|患有|用药记录|过敏史|健康状况)\s*[:：]?\s*\S+",
+    re.IGNORECASE,
+)
+
 # Complete precise address — heuristic: 6+ consecutive digits OR detailed street-level
 _ADDRESS_PATTERN = re.compile(
     r"(?:省|市|区|县|镇|街道|路|弄|号|栋|单元|室)\s*[\d一-鿿-]{4,}",
@@ -65,6 +75,12 @@ def contains_sensitive_info(text: str) -> str | None:
 
     if _PASSWORD_PATTERN.search(text):
         return "检测到密码信息，禁止存储"
+
+    if _VERIFICATION_CODE_PATTERN.search(text):
+        return "检测到验证码，禁止存储"
+
+    if _HEALTH_PRIVACY_PATTERN.search(text):
+        return "检测到健康隐私，禁止存储"
 
     if _ADDRESS_PATTERN.search(text):
         return "检测到详细地址信息，禁止存储"

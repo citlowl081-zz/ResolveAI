@@ -1,59 +1,70 @@
-# ResolveAI 微信小程序
+# ResolveAI 智选商城微信小程序
 
-基于微信原生框架的客户自助售后小程序，与 ResolveAI Backend API 共用后端服务。
+微信原生 TypeScript 小程序，与 Customer Web 共用 ResolveAI Backend API、用户账号、订单、售后工单、Agent 会话、长期记忆和审批数据。
 
-## 目录结构
+## 导入与启动
 
-```
-miniprogram/
-├── README.md                         # 本文件
-├── miniprogram/
-│   ├── pages/                        # 页面目录
-│   │   └── .gitkeep
-│   ├── components/                   # 公共组件
-│   │   └── .gitkeep
-│   ├── services/                     # API 调用封装
-│   │   └── .gitkeep
-│   ├── utils/                        # 工具函数
-│   │   └── .gitkeep
-│   └── assets/                       # 静态资源
-│       └── .gitkeep
-├── typings/                          # TypeScript 类型声明
-│   └── .gitkeep
-└── project.config.example.json       # 项目配置模板
-```
+1. 在项目根目录运行 `docker compose up -d`，确认数据库和后端服务健康。
+2. 复制项目配置：`cp miniprogram/project.config.example.json miniprogram/project.config.json`。
+3. 微信开发者工具选择“导入项目”，导入目录为项目中的 `miniprogram/`。
+4. 本机模拟器验收可选择测试号；真机发布或需要完整平台能力时使用正式 AppID。
+5. TypeScript 编译已在项目配置模板中启用，不需要手工生成页面 `.js` 文件。
 
-## 技术栈
+## API 地址
 
-- 微信原生小程序框架
-- TypeScript（推荐）
-- 与 Backend API 通过 HTTPS 通信
+本机模拟器默认连接本机 Backend API，配置字段为 `miniprogram/miniprogram/app.ts` 中的 `globalData.apiBase`。仓库不包含 API Key，小程序前端也不应配置任何 LLM 凭据。
 
-## 开发状态
+真机无法访问开发电脑的 `localhost`。真机验收需要：
 
-**Phase 03 阶段仅建立基础目录结构。**
+- 将 API 地址改为手机可访问的局域网地址，或已部署的 HTTPS 地址；
+- 手机与开发电脑处于同一可访问网络，且防火墙允许后端端口；
+- 正式环境使用微信小程序 AppID、HTTPS 和已配置的 request 合法域名。
 
-小程序功能开发计划在 Phase 07（前端）实施。
+## 本地演示账号
 
-## 环境要求
+- Demo Customer：`demo@example.com`
+- 密码：`demo123456`
 
-- 微信开发者工具（最新稳定版）
-- 微信小程序 AppID
-- 后端服务运行中（`docker-compose up -d`）
+该账号由本地 Seed 创建，仅用于演示，不应复用于生产环境。
 
-## 配置
+## 页面清单
 
-1. 复制项目配置模板：
+- 登录、注册
+- 商城首页、商品列表、商品详情、本地购物车
+- 订单列表、订单详情与物流轨迹
+- AI 售后助手、服务器会话列表与历史消息
+- 售后工单
+- 服务偏好管理（复用长期记忆能力）
+- 我的审批与审批详情
+- 个人中心
+
+## 模拟器验收流程
+
+1. 登录后确认首页品牌、六个商品分类、商品区块和“首页 / 消息 / 购物车 / 我的”底部导航。
+2. 检查后端返回的商品列表与详情，缺图时应显示“待上传商品图片”。
+3. 检查订单详情；仅已发货或已签收订单请求物流，没有记录时显示“暂无物流信息”。
+4. 在 AI 售后助手新建会话，发送消息后应立即显示用户消息与等待秒数。
+5. 切换页面、重新进入或重新编译后，确认最近会话和服务器历史消息恢复。
+6. 检查政策引用、待确认操作、重复确认保护和高风险审批状态。
+7. 输入“请记住，我更倾向于换货而不是退款。”，仅在点击“记住这条偏好”后保存长期记忆。
+8. 在长期记忆页完成新建、修改和删除；在审批页查看当前账号的审批详情。
+9. Token 失效时应回到登录页，页面不应显示原始 HTTP 错误或内部错误码。
+10. 商品详情加入购物车后，确认商品按当前账号保存在本地；演示版本不执行在线结算。
+
+## 静态检查
+
+从项目根目录运行：
+
 ```bash
-cp project.config.example.json project.config.json
+node miniprogram/scripts/check-miniprogram.mjs
 ```
 
-2. 编辑 `project.config.json`，填入真实 AppID。
+检查覆盖页面四件套、导航与组件路径、旧物流接口、散落的 `wx.request`、品牌、Agent 幂等字段、会话恢复、Memory 明确确认和疑似 Secret。
 
-3. API 地址配置在 `miniprogram/services/api.ts` 中（待实现）。
+## 当前功能边界
 
-## 注意事项
-
-- `project.config.json` 和 `project.private.config.json` 已加入 `.gitignore`，不会提交。
-- 微信开发者工具本地缓存和临时文件已忽略。
-- 小程序与 Web 前端共用 Backend API，无需独立后端。
+- 商品和业务数据均来自真实 Backend API，不在小程序中硬编码商品或伪造结果。
+- 本地仅保存 Access/Refresh Token、最近一次 Agent `session_id` 和按账号隔离的购物车；不会把完整聊天正文写入本地 Storage。
+- LLM API Key 只属于后端本地配置或部署平台 Secret，绝不能放入小程序代码。
+- 商品图片尚未随仓库提供，当前使用固定比例的本地文字占位，不请求网络图片。
+- 客户审批接口出于最小披露原则不返回完整操作载荷，因此小程序审批详情不能直接展示订单编号；审批执行后的工单请在“售后工单”查看。

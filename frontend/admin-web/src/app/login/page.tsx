@@ -2,27 +2,103 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-
+import { friendlyError } from "@/lib/labels";
 export default function AdminLoginPage() {
-  const [email, setEmail] = useState(""); const [password, setPassword] = useState("");
-  const [error, setError] = useState(""); const [loading, setLoading] = useState(false);
-  const { login } = useAuth(); const router = useRouter();
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault(); setError(""); setLoading(true);
-    try { await login(email, password); router.push("/"); } catch (err: unknown) { setError(err instanceof Error ? err.message : "登录失败"); } finally { setLoading(false); }
+  const [email, setEmail] = useState(""),
+    [password, setPassword] = useState(""),
+    [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const { login } = useAuth();
+  const router = useRouter();
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    try {
+      await login(email, password);
+      router.push("/");
+    } catch (e) {
+      setError(friendlyError(e));
+    } finally {
+      setLoading(false);
+    }
   }
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <form onSubmit={handleSubmit} className="bg-white p-8 rounded-xl shadow-sm border w-full max-w-sm">
-        <h1 className="text-2xl font-bold text-center mb-2">ResolveAI Admin</h1>
-        <p className="text-center text-gray-500 text-sm mb-6">运营管理后台</p>
-        {error && <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm mb-4">{error}</div>}
-        <input type="email" placeholder="邮箱" value={email} onChange={e => setEmail(e.target.value)} className="w-full px-4 py-2 border rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-blue-500" required />
-        <input type="password" placeholder="密码" value={password} onChange={e => setPassword(e.target.value)} className="w-full px-4 py-2 border rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500" required />
-        <button type="submit" disabled={loading} className="w-full py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 disabled:opacity-50">{loading ? "登录中..." : "登录"}</button>
-      </form>
+    <div className="grid min-h-screen lg:grid-cols-2">
+      <section className="hidden bg-[var(--sidebar-bg)] p-16 text-white lg:flex lg:flex-col lg:justify-between">
+        <div className="flex items-center gap-4">
+          <span className="grid h-12 w-12 place-items-center rounded-lg bg-blue-500 text-lg font-bold">
+            RA
+          </span>
+          <div>
+            <h1 className="text-2xl font-bold">ResolveAI 智能售后中台</h1>
+            <p className="mt-1 text-slate-300">智能售后运营与风险控制平台</p>
+          </div>
+        </div>
+        <div>
+          <p className="max-w-xl text-3xl font-semibold leading-relaxed">
+            让售后政策、Agent 决策与人工审批在同一个安全工作台中清晰协同。
+          </p>
+          <p className="mt-4 text-sm text-slate-300">
+            Demo 环境 · 仅使用演示账号
+          </p>
+        </div>
+      </section>
+      <section className="grid place-items-center p-6">
+        <form
+          onSubmit={submit}
+          className="w-full max-w-sm rounded-lg border bg-white p-8 shadow-sm"
+        >
+          <div className="mb-7 lg:hidden">
+            <span className="font-bold">ResolveAI 智能售后中台</span>
+            <p className="mt-1 text-sm text-slate-500">
+              智能售后运营与风险控制平台
+            </p>
+          </div>
+          <h2 className="text-2xl font-bold">管理员登录</h2>
+          <p className="mt-2 text-sm text-slate-500">
+            请输入 Demo 管理员或运营人员账号
+          </p>
+          {error && (
+            <div
+              role="alert"
+              className="mt-5 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+            >
+              {error}
+            </div>
+          )}
+          <label className="mt-6 block text-sm font-medium">
+            邮箱
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="mt-2 w-full rounded-md border px-3 py-2.5"
+              placeholder="admin@example.com"
+              required
+            />
+          </label>
+          <label className="mt-4 block text-sm font-medium">
+            密码
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="mt-2 w-full rounded-md border px-3 py-2.5"
+              required
+            />
+          </label>
+          <button
+            disabled={loading}
+            className="mt-6 w-full rounded-md bg-[var(--primary)] py-2.5 font-medium text-white disabled:opacity-50"
+          >
+            {loading ? "正在登录…" : "登录"}
+          </button>
+          <p className="mt-5 text-center text-xs text-slate-400">
+            账号信息请查看项目 README 的 Demo 登录说明
+          </p>
+        </form>
+      </section>
     </div>
   );
 }

@@ -1,0 +1,18 @@
+.product-placeholder { width: 100%; aspect-ratio: 1 / 1; display: flex; align-items: center; justify-content: center; margin-bottom: 24rpx; border-radius: 16rpx; background: #eef1f5; color: #94a3b8; font-size: 25rpx; }
+.product-detail-card { box-shadow: none; border: 1rpx solid #e5e7eb; }
+.product-title { color: #1f2937; font-size: 36rpx; font-weight: 700; line-height: 1.45; }
+.product-price { margin-top: 14rpx; color: #2f6bee; font-size: 40rpx; font-weight: 700; }
+.product-facts { margin-top: 22rpx; padding: 4rpx 20rpx; border-radius: 14rpx; background: #f8fafc; }
+.product-facts view { display: flex; justify-content: space-between; gap: 24rpx; padding: 16rpx 0; border-bottom: 1rpx solid #e5e7eb; color: #475467; font-size: 25rpx; }
+.product-facts view:last-child { border-bottom: 0; }
+.product-facts text:first-child { flex: none; color: #667085; }
+.product-facts text:last-child { min-width: 0; text-align: right; overflow-wrap: anywhere; }
+.detail-section { margin-top: 26rpx; padding-top: 22rpx; border-top: 1rpx solid #e5e7eb; }
+.detail-heading { margin-bottom: 10rpx; color: #1f2937; font-size: 28rpx; font-weight: 700; }
+.description, .after-sales-section { color: #475569; font-size: 26rpx; line-height: 1.7; }
+.after-sales-section { padding: 20rpx; border: 0; border-radius: 14rpx; background: #f8fafc; }
+.detail-actions { display: flex; gap: 16rpx; margin-top: 30rpx; }
+button.detail-button { min-width: 0; flex: 1; height: 82rpx; margin: 0; padding: 0; border-radius: 14rpx; font-size: 28rpx; line-height: 82rpx; }
+button.detail-button::after { border: 0; }
+button.detail-button.primary { background: #2f6bee; color: #fff; }
+button.detail-button.secondary { border: 1rpx solid #2f6bee; background: #fff; color: #2f6bee; }

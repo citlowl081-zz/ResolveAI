@@ -4,17 +4,65 @@ All integration tests are self-contained: they create their own data
 via the API and do not depend on seed data or test execution order.
 """
 
+import os
 import uuid
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Generator
 from typing import Any
 
+import psycopg2
+import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
 
-from app.config.settings import settings
-from app.database.engine import create_engine
-from app.main import create_app
+from app.database.test_guard import assert_safe_test_database_url
+
+_TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL") or os.getenv("DATABASE_URL")
+if not _TEST_DATABASE_URL:
+    raise pytest.UsageError(
+        "TEST_DATABASE_URL is required; use the isolated ResolveAI test database"
+    )
+assert _TEST_DATABASE_URL is not None
+_SAFE_TEST_DATABASE_URL: str = _TEST_DATABASE_URL
+try:
+    assert_safe_test_database_url(_SAFE_TEST_DATABASE_URL)
+except RuntimeError as exc:
+    raise pytest.UsageError(str(exc)) from exc
+
+# Set safe test configuration before importing application settings. This prevents
+# pytest from ever selecting a real LLM provider or the daily demo database.
+os.environ["DATABASE_URL"] = _SAFE_TEST_DATABASE_URL
+os.environ["APP_ENV"] = "test"
+os.environ["LLM_PROVIDER"] = "mock"
+os.environ["LLM_API_KEY"] = ""
+os.environ["LLM_BASE_URL"] = ""
+os.environ["EMBEDDING_PROVIDER"] = "mock"
+os.environ["EMBEDDING_API_KEY"] = ""
+
+from app.config.settings import settings  # noqa: E402
+from app.database.engine import create_engine  # noqa: E402
+from app.main import create_app  # noqa: E402
+
+
+def _truncate_test_database() -> None:
+    sync_url = _SAFE_TEST_DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://", 1)
+    with psycopg2.connect(sync_url) as connection, connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT tablename FROM pg_tables "
+            "WHERE schemaname = 'public' AND tablename <> 'alembic_version'"
+        )
+        table_names = [str(row[0]) for row in cursor.fetchall()]
+        if table_names:
+            quoted = ", ".join(f'"{name}"' for name in table_names)
+            cursor.execute(f"TRUNCATE TABLE {quoted} CASCADE")
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _isolate_test_database() -> Generator[None, None, None]:
+    """Start and finish every pytest run with an empty, guarded test database."""
+    _truncate_test_database()
+    yield
+    _truncate_test_database()
 
 
 @pytest_asyncio.fixture(autouse=True)

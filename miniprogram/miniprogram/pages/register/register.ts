@@ -1,11 +1,18 @@
 import { api } from "../../services/api";
 
 Page({
-  data: { name: "", email: "", password: "", loading: false, error: "" },
+  data: { name: "", email: "", password: "", confirmPassword: "", focusedField: "", loading: false, error: "" },
   onName(e: any) { this.setData({ name: e.detail.value }); },
   onEmail(e: any) { this.setData({ email: e.detail.value }); },
   onPwd(e: any) { this.setData({ password: e.detail.value }); },
+  onConfirmPwd(e: any) { this.setData({ confirmPassword: e.detail.value }); },
+  onFocus(e: any) { this.setData({ focusedField: e.currentTarget.dataset.field || "" }); },
+  onBlur() { this.setData({ focusedField: "" }); },
   async register() {
+    if (this.data.password !== this.data.confirmPassword) {
+      this.setData({ error: "两次输入的密码不一致" });
+      return;
+    }
     this.setData({ loading: true, error: "" });
     try {
       const res = await api.auth.register(this.data.email, this.data.password, this.data.name);

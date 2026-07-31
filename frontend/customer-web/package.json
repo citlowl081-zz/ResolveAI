@@ -1,9 +1,11 @@
 {
   "name": "customer-web",
-  "version": "0.1.0",
+  "version": "1.0.1",
   "private": true,
   "scripts": {
+    "predev": "node scripts/generate-image-manifest.mjs",
     "dev": "next dev",
+    "prebuild": "node scripts/generate-image-manifest.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",

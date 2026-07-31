@@ -94,6 +94,26 @@ class _PostDeliveryRefundProvider(ModelProvider):
         )
 
 
+class _MemoryMisclassifiedAsActionProvider(ModelProvider):
+    @property
+    def provider_name(self) -> str:
+        return "openai_compatible"
+
+    async def chat(self, request: Any) -> ChatResponse:
+        raise AssertionError("chat() should not be used for intent classification")
+
+    async def chat_structured(
+        self, request: Any, output_schema: dict[str, Any],
+    ) -> ChatResponse:
+        return ChatResponse(
+            content=(
+                '{"intent":"EXCHANGE","confidence":0.95,'
+                '"request_mode":"ACTION"}'
+            ),
+            model="qwen-test",
+        )
+
+
 @pytest.mark.parametrize("message", [
     "能退吗",
     "是否可以退款",
@@ -159,6 +179,18 @@ async def test_model_failure_cannot_upgrade_policy_question_to_write_action() ->
     assert classify_trace["llm_call"]["structured_output_failed"] is True
     assert classify_trace["llm_call"]["fallback_used"] is True
     assert classify_trace["llm_call"]["fallback_reason"] == "RuntimeError"
+
+
+async def test_memory_preference_cannot_be_upgraded_to_write_action() -> None:
+    set_provider(_MemoryMisclassifiedAsActionProvider())
+
+    state = await classify_intent(_state("请记住，我更倾向于换货而不是退款。"))
+    state = await select_tools(state)
+    state = await compose_response(state)
+
+    assert state["request_mode"] == "INFORMATION"
+    assert state.get("proposed_actions") == []
+    assert state.get("_pending_action_for_snapshot") is None
 
 
 async def test_trace_records_provider_structured_output_fallback() -> None:

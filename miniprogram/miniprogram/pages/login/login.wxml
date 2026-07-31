@@ -1,13 +1,19 @@
-<view class="container" style="padding-top:120rpx">
-  <view style="text-align:center;margin-bottom:60rpx">
-    <text style="font-size:48rpx;font-weight:bold;color:#2563eb">ResolveAI</text>
-    <view style="color:#9ca3af;margin-top:12rpx">AI 驱动售后智能客服</view>
-  </view>
-  <input class="input" placeholder="邮箱" bindinput="onEmail" value="{{email}}" type="text" />
-  <input class="input" placeholder="密码" bindinput="onPwd" value="{{password}}" type="password" />
-  <view wx:if="{{error}}" class="error-text">{{error}}</view>
-  <button class="btn btn-primary" bindtap="login" loading="{{loading}}" disabled="{{loading}}">登录</button>
-  <view style="text-align:center;margin-top:30rpx">
-    <navigator url="/pages/register/register" style="color:#2563eb">还没有账号？立即注册</navigator>
+<view class="auth-page">
+  <view class="auth-shell">
+    <view class="auth-brand">
+      <text class="auth-brand__title">ResolveAI 智选商城</text>
+      <view class="auth-brand__subtitle">智能数码与桌面办公精选商城</view>
+    </view>
+    <view class="auth-form">
+      <view class="auth-field {{focusedField == 'email' ? 'auth-field--focused' : ''}}">
+        <input class="auth-input" aria-label="邮箱" placeholder="邮箱" placeholder-class="auth-placeholder" bindinput="onEmail" bindfocus="onFocus" bindblur="onBlur" data-field="email" value="{{email}}" type="text" confirm-type="next" cursor-spacing="28" />
+      </view>
+      <view class="auth-field {{focusedField == 'password' ? 'auth-field--focused' : ''}}">
+        <input class="auth-input" aria-label="密码" placeholder="密码" placeholder-class="auth-placeholder" bindinput="onPwd" bindfocus="onFocus" bindblur="onBlur" data-field="password" value="{{password}}" type="password" confirm-type="done" cursor-spacing="28" />
+      </view>
+      <view wx:if="{{error}}" class="auth-error">{{error}}</view>
+      <button class="auth-submit" bindtap="login" loading="{{loading}}" disabled="{{loading}}">登录</button>
+      <view class="auth-link">还没有账号？<navigator class="auth-link__action" url="/pages/register/register">立即注册</navigator></view>
+    </view>
   </view>
 </view>

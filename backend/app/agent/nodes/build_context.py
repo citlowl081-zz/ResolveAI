@@ -1,10 +1,12 @@
 """build_context node — load orders, tickets, recent messages, and user memories for LLM context."""
 
 import uuid
+from collections.abc import Sequence
 
 from app.agent.sanitization import project_memory_for_llm
 from app.agent.state import AgentState
 from app.config.settings import settings
+from app.models.agent_message import AgentMessage
 from app.repositories.agent_message import AgentMessageRepository
 from app.services.order import OrderService
 from app.services.ticket import TicketService
@@ -12,6 +14,24 @@ from app.services.ticket import TicketService
 
 def _estimate_tokens(text: str) -> int:
     return max(1, len(text) // 3)
+
+
+def _project_prior_messages(
+    messages: Sequence[AgentMessage], current_sequence: int,
+) -> list[dict]:
+    """Project only prior customer-visible turns into the LLM context."""
+    return [
+        {
+            "role": message.role,
+            "content": message.content,
+            "sequence_number": message.sequence_number,
+            "tool_calls": None,
+            "tool_call_id": None,
+        }
+        for message in messages
+        if message.sequence_number < current_sequence
+        and message.role in {"USER", "ASSISTANT"}
+    ]
 
 
 async def build_context(state: AgentState) -> AgentState:
@@ -49,14 +69,9 @@ async def build_context(state: AgentState) -> AgentState:
         try:
             msg_repo = AgentMessageRepository(session)
             recent_messages_raw = await msg_repo.list_recent_for_context(session_id, limit=50)
-            recent_messages = [
-                {
-                    "role": m.role, "content": m.content,
-                    "sequence_number": m.sequence_number,
-                    "tool_calls": m.tool_calls, "tool_call_id": m.tool_call_id,
-                }
-                for m in recent_messages_raw
-            ]
+            recent_messages = _project_prior_messages(
+                recent_messages_raw, state["user_msg_sequence"],
+            )
         except Exception:
             recent_messages = []
 
@@ -95,9 +110,6 @@ async def build_context(state: AgentState) -> AgentState:
     for msg in reversed(recent_messages):
         msg_content = msg.get("content", "")
         msg_tokens = _estimate_tokens(msg_content if isinstance(msg_content, str) else "")
-        if msg.get("tool_calls"):
-            import json
-            msg_tokens += _estimate_tokens(json.dumps(msg["tool_calls"], sort_keys=True))
         if remaining - msg_tokens < 0:
             break
         selected.append(msg)

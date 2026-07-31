@@ -6,8 +6,9 @@
         <text style="font-weight:bold">订单 {{order.order_number}}</text>
         <text class="badge badge-blue">{{statusText[order.status] || order.status}}</text>
       </view>
-      <view class="text-sm text-gray mt-2">总额: ¥{{order.total_amount}} | 运费: ¥{{order.shipping_fee}}</view>
-      <view class="text-sm text-gray">支付: {{order.paid_at || '-'}} | 发货: {{order.shipped_at || '-'}} | 签收: {{order.delivered_at || '-'}}</view>
+      <view class="text-sm text-gray mt-2">订单总额：¥{{order.total_amount}} · 运费：¥{{order.shipping_fee}}</view>
+      <view class="text-sm text-gray">支付时间：{{order.paid_at || '暂无'}}</view>
+      <view class="text-sm text-gray">发货时间：{{order.shipped_at || '暂无'}} · 签收时间：{{order.delivered_at || '暂无'}}</view>
     </view>
     <view class="card" wx:if="{{order.items.length}}">
       <view style="font-weight:600;margin-bottom:12rpx">商品明细</view>
@@ -16,10 +17,19 @@
         <text>¥{{item.unit_price}}</text>
       </view>
     </view>
-    <view class="card" wx:if="{{logistics}}">
+    <view class="card">
       <view style="font-weight:600;margin-bottom:12rpx">物流信息</view>
-      <view class="text-sm">{{logistics.carrier}}: {{logistics.tracking_number}}</view>
-      <view class="text-sm text-gray">状态: {{logistics.status}}</view>
+      <view wx:if="{{logisticsLoading}}" class="text-sm text-gray">正在加载物流...</view>
+      <block wx:elif="{{logistics}}">
+        <view class="text-sm">{{logistics.carrier}}：{{logistics.tracking_number}}</view>
+        <view class="text-sm text-gray">状态：{{statusText[logistics.status] || logistics.status}}</view>
+        <view wx:if="{{logistics.current_location}}" class="text-sm text-gray">当前位置：{{logistics.current_location}}</view>
+        <view wx:for="{{logistics.events}}" wx:key="timestamp" class="text-sm mt-2">
+          <view>{{item.description}}</view><view class="text-gray">{{item.location}} · {{item.timestamp}}</view>
+        </view>
+      </block>
+      <view wx:else class="text-sm text-gray">暂无物流信息</view>
     </view>
+    <view wx:if="{{error}}" class="error-text">{{error}}</view>
   </block>
 </view>

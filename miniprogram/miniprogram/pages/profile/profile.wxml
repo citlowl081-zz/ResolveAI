@@ -1,9 +1,24 @@
-<view class="container">
-  <view class="card" style="text-align:center">
-    <view style="font-size:60rpx;margin-bottom:16rpx">👤</view>
-    <view style="font-size:32rpx;font-weight:bold">{{user.full_name}}</view>
-    <view class="text-sm text-gray mt-2">{{user.email}}</view>
-    <view class="text-sm text-gray">角色: {{user.role}}</view>
+<view class="profile-page">
+  <view class="profile-card">
+    <view class="avatar">{{userInitial}}</view>
+    <view class="profile-copy"><view class="profile-name">{{user.full_name || '顾客'}}</view><view class="profile-email">{{user.email}}</view></view>
   </view>
-  <button bindtap="logout" class="btn btn-danger" style="margin-top:40rpx">退出登录</button>
+
+  <view class="profile-section">
+    <view class="section-title">订单服务</view>
+    <navigator url="/pages/orders/orders" class="menu-row"><view class="menu-icon">单</view><view class="menu-copy"><view>我的订单</view><text>查看订单详情与物流进度</text></view><text class="menu-arrow">›</text></navigator>
+  </view>
+
+  <view class="profile-section">
+    <view class="section-title">售后服务</view>
+    <navigator url="/pages/tickets/tickets" class="menu-row"><view class="menu-icon">售</view><view class="menu-copy"><view>售后工单</view><text>查看退款退货进度与审批状态</text></view><text class="menu-arrow">›</text></navigator>
+    <navigator url="/pages/orders/orders" class="menu-row"><view class="menu-icon">物</view><view class="menu-copy"><view>物流查询</view><text>从订单详情查看真实物流轨迹</text></view><text class="menu-arrow">›</text></navigator>
+  </view>
+
+  <view class="profile-section">
+    <view class="section-title">账号设置</view>
+    <view class="menu-row"><view class="menu-icon">账</view><view class="menu-copy"><view>账号身份</view><text>{{roleText[user.role] || '顾客'}}</text></view></view>
+    <navigator url="/pages/memories/memories" class="menu-row"><view class="menu-icon">偏</view><view class="menu-copy"><view>服务偏好</view><text>管理经你确认保存的服务偏好</text></view><text class="menu-arrow">›</text></navigator>
+  </view>
+  <button bindtap="logout" class="logout-button">退出登录</button>
 </view>

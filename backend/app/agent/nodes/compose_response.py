@@ -133,8 +133,8 @@ async def compose_response(state: AgentState) -> AgentState:
 
 
 def _finalize_response(state: AgentState) -> AgentState:
-    """Evaluate memory writes and return state — called at every return point."""
-    state["memory_changes"] = _evaluate_memory_changes(state)
+    """Long-term memory is written only after explicit UI confirmation."""
+    state["memory_changes"] = None
     return state
 
 
@@ -152,6 +152,14 @@ async def _llm_compose(state: AgentState, provider: Any) -> Any:
             context_items.append(f"{r['tool_name']} result: {json.dumps(r['data'], ensure_ascii=False)}")
 
     context_str = "\n".join(context_items) if context_items else "No tool results available."
+    conversation = "\n".join(
+        f"{item.get('role')}: {str(item.get('content', ''))[:1000]}"
+        for item in (state.get("context_messages") or [])[-6:]
+        if item.get("role") in {"USER", "ASSISTANT"} and item.get("content")
+    ) or "No prior conversation."
+    memories = json.dumps(
+        state.get("user_memories") or [], ensure_ascii=False,
+    )[:2000]
 
     system_prompt = (
         "You are an e-commerce after-sales customer service agent. "
@@ -163,9 +171,14 @@ async def _llm_compose(state: AgentState, provider: Any) -> Any:
         "For policy answers, use only the supplied policy results and distinguish legal_requirement from company_policy. "
         "If no policy result exists, say that the current active policy database cannot confirm the answer. "
         "If confirm_action_id was already used, do NOT propose another action."
+        "When the user asks you to remember something, explain that it will only "
+        "be stored after they use the confirmation control in the interface; never "
+        "claim that long-term memory has already been saved."
     )
 
     user_prompt = (
+        f"Recent conversation:\n{conversation}\n"
+        f"Confirmed long-term memories: {memories}\n"
         f"User message: {state['user_message']}\n"
         f"Detected intent: {intent}\n"
         f"Request mode: {request_mode}\n"

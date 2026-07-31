@@ -43,7 +43,10 @@ async def create_session_and_chat(
     user_id = uuid.UUID(current_user["sub"])
     user_role = current_user.get("role", "CUSTOMER")
 
-    rhash = _compute_body_hash({"message": req.message})
+    body: dict = {"message": req.message}
+    if req.client_message_id:
+        body["client_message_id"] = str(req.client_message_id)
+    rhash = _compute_body_hash(body)
 
     orchestrator = _get_orchestrator()
     result = await orchestrator.run(
@@ -81,6 +84,8 @@ async def send_message(
     user_role = current_user.get("role", "CUSTOMER")
 
     body: dict = {"message": req.message}
+    if req.client_message_id:
+        body["client_message_id"] = str(req.client_message_id)
     if req.confirm_action_id:
         body["confirm_action_id"] = str(req.confirm_action_id)
     rhash = _compute_body_hash(body)
@@ -119,8 +124,11 @@ async def list_sessions(
     items, total = await repo.list_by_user(
         uuid.UUID(current_user["sub"]), page, page_size, status,
     )
+    from app.repositories.agent_message import AgentMessageRepository
+    msg_repo = AgentMessageRepository(db)
+    summaries = [await _session_to_summary(s, msg_repo) for s in items]
     return APIResponse(success=True, code="OK", data={
-        "items": [_session_to_dict(s) for s in items],
+        "items": summaries,
         "total": total, "page": page, "page_size": page_size,
         "total_pages": max(1, (total + page_size - 1) // page_size) if total > 0 else 1,
     })
@@ -162,9 +170,12 @@ async def get_messages(
         raise NotFoundError("Session not found")
 
     msg_repo = AgentMessageRepository(db)
-    items, total = await msg_repo.list_by_session(session_id, page, page_size, before_sequence)
+    items, total = await msg_repo.list_customer_history(
+        session_id, page, page_size, before_sequence,
+    )
+    active_action = (sess.context_snapshot or {}).get("pending_action")
     return APIResponse(success=True, code="OK", data={
-        "items": [_msg_to_dict(m) for m in items],
+        "items": [_msg_to_dict(m, active_action) for m in items],
         "total": total, "page": page, "page_size": page_size,
         "total_pages": max(1, (total + page_size - 1) // page_size) if total > 0 else 1,
     })
@@ -223,14 +234,54 @@ def _session_to_dict(sess) -> dict:  # type: ignore[no-untyped-def]
     }
 
 
-def _msg_to_dict(msg) -> dict:  # type: ignore[no-untyped-def]
+async def _session_to_summary(sess, msg_repo) -> dict:  # type: ignore[no-untyped-def]
+    first = await msg_repo.get_first_user_message(sess.id)
+    last = await msg_repo.get_last_customer_message(sess.id)
+    message_count = await msg_repo.count_customer_messages(sess.id)
+    title = _preview(first.content if first else "新对话", 28)
     return {
+        "session_id": str(sess.id),
+        "title": title or "新对话",
+        "status": sess.status,
+        "message_count": message_count,
+        "last_message_preview": _preview(last.content if last else "", 60),
+        "created_at": sess.created_at.isoformat() if sess.created_at else None,
+        "updated_at": sess.updated_at.isoformat() if sess.updated_at else None,
+    }
+
+
+def _preview(content: str, limit: int) -> str:
+    compact = " ".join(content.split())
+    return compact if len(compact) <= limit else f"{compact[:limit]}…"
+
+
+def _msg_to_dict(msg, active_action: dict | None = None) -> dict:  # type: ignore[no-untyped-def]
+    metadata = msg.message_metadata or {}
+    citations = metadata.get("citations") if isinstance(metadata.get("citations"), list) else []
+    proposed_actions = metadata.get("proposed_actions")
+    raw_actions: list = proposed_actions if isinstance(proposed_actions, list) else []
+    actions: list[dict] = []
+    for raw in raw_actions:
+        if not isinstance(raw, dict):
+            continue
+        action = {
+            key: raw.get(key)
+            for key in ("action_id", "tool_name", "description", "status", "expires_at")
+        }
+        if active_action and active_action.get("action_id") == action["action_id"]:
+            action["status"] = active_action.get("status", action["status"])
+        elif str(action.get("status", "")).lower() == "pending_confirmation":
+            action["status"] = "CONSUMED"
+        actions.append(action)
+    return {
+        "message_id": str(msg.id),
         "role": msg.role,
         "content": msg.content,
         "sequence_number": msg.sequence_number,
-        "turn_sequence": msg.turn_sequence,
-        "tool_calls": msg.tool_calls,
-        "tool_call_id": msg.tool_call_id,
-        "metadata": msg.message_metadata,
+        "citations": citations,
+        "proposed_actions": actions,
+        "trace_id": metadata.get("trace_id"),
+        "delivery_status": metadata.get("delivery_status", "sent"),
+        "client_message_id": metadata.get("client_message_id"),
         "created_at": msg.created_at.isoformat() if msg.created_at else None,
     }

@@ -1,0 +1,18 @@
+.profile-page { min-height: 100vh; padding: 28rpx 24rpx 60rpx; background: #f5f7fa; box-sizing: border-box; }
+.profile-card { display: flex; align-items: center; gap: 22rpx; max-width: 872rpx; margin: 0 auto 28rpx; padding: 30rpx 24rpx; border: 1rpx solid #e5e7eb; border-radius: 18rpx; background: #fff; }
+.avatar { display: flex; flex: none; align-items: center; justify-content: center; width: 88rpx; height: 88rpx; border-radius: 24rpx; background: #eaf0ff; color: #2f6bee; font-size: 34rpx; font-weight: 700; }
+.profile-copy { min-width: 0; }
+.profile-name { color: #1f2937; font-size: 33rpx; font-weight: 700; }
+.profile-email { overflow: hidden; margin-top: 7rpx; color: #667085; font-size: 24rpx; text-overflow: ellipsis; white-space: nowrap; }
+.profile-section { max-width: 920rpx; margin: 0 auto 28rpx; }
+.section-title { margin: 0 8rpx 12rpx; color: #667085; font-size: 24rpx; }
+.menu-row { display: flex; align-items: center; gap: 18rpx; margin-bottom: 2rpx; padding: 24rpx; border: 1rpx solid #e5e7eb; background: #fff; }
+.menu-row:first-of-type { border-radius: 16rpx 16rpx 0 0; }
+.menu-row:last-child { border-radius: 0 0 16rpx 16rpx; }
+.menu-row:only-child { border-radius: 16rpx; }
+.menu-icon { display: flex; flex: none; align-items: center; justify-content: center; width: 58rpx; height: 58rpx; border-radius: 15rpx; background: #eef3ff; color: #2f6bee; font-size: 23rpx; font-weight: 700; }
+.menu-copy { min-width: 0; flex: 1; color: #1f2937; font-size: 28rpx; font-weight: 600; }
+.menu-copy text { display: block; margin-top: 5rpx; color: #667085; font-size: 22rpx; font-weight: 400; }
+.menu-arrow { color: #98a2b3; font-size: 40rpx; }
+button.logout-button { width: 100%; max-width: 920rpx; height: 84rpx; margin: 40rpx auto 0; padding: 0; border: 1rpx solid #e5e7eb; border-radius: 16rpx; background: #fff; color: #d92d20; font-size: 29rpx; line-height: 84rpx; }
+button.logout-button::after { border: 0; }

@@ -45,6 +45,15 @@ async def classify_intent(state: AgentState) -> AgentState:
         t0 = time.monotonic()
         fallback_used = False
         try:
+            history = [
+                ChatMessage(
+                    role="assistant" if item.get("role") == "ASSISTANT" else "user",
+                    content=str(item.get("content", ""))[:1000],
+                )
+                for item in (state.get("context_messages") or [])[-6:]
+                if item.get("role") in {"USER", "ASSISTANT"}
+                and item.get("content")
+            ]
             request = ChatRequest(
                 messages=[
                     ChatMessage(
@@ -62,6 +71,7 @@ async def classify_intent(state: AgentState) -> AgentState:
                             "apply, create, submit, or execute as ACTION."
                         ),
                     ),
+                    *history,
                     ChatMessage(role="user", content=message),
                 ],
                 max_tokens=2048,
@@ -192,11 +202,14 @@ _CONSULTATION_MARKERS = (
     "能退", "能不能", "能否", "可以", "是否", "还能", "吗", "？",
     "什么", "怎么", "如何", "条件", "流程", "政策", "规则", "了解", "咨询",
 )
+_MEMORY_INSTRUCTION_MARKERS = ("请记住", "记住这个", "保存这条偏好", "保存为偏好")
 
 
 def _classify_request_mode(message: str, model_mode: object = None) -> str:
     """Apply the deterministic no-write safety boundary after model classification."""
     normalized = message.strip().lower()
+    if any(marker in normalized for marker in _MEMORY_INSTRUCTION_MARKERS):
+        return "INFORMATION"
     if any(pattern.search(normalized) for pattern in _ACTION_PATTERNS):
         return "ACTION"
     has_after_sales_term = any(term in normalized for term in _AFTER_SALES_TERMS)

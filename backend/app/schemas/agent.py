@@ -10,6 +10,9 @@ class AgentMessageRequest(BaseModel):
     """POST /agent/sessions/{id}/messages request body."""
     message: str = Field(..., min_length=1, max_length=4000,
                          description="User message text")
+    client_message_id: uuid.UUID | None = Field(
+        None, description="Client-generated id reused as the Idempotency-Key on retry"
+    )
     confirm_action_id: uuid.UUID | None = Field(
         None, description="Confirm a pending action by its action_id"
     )
@@ -19,6 +22,9 @@ class AgentSessionCreateRequest(BaseModel):
     """POST /agent/sessions request body."""
     message: str = Field(..., min_length=1, max_length=4000,
                          description="First user message")
+    client_message_id: uuid.UUID | None = Field(
+        None, description="Client-generated id reused as the Idempotency-Key on retry"
+    )
 
 
 # ── Response Schemas ─────────────────────────────────────────────────

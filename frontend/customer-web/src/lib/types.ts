@@ -27,10 +27,13 @@ export interface TokenData {
 export interface Product {
   id: string;
   name: string;
+  description?: string | null;
   category: string;
   price: string;
   stock: number;
+  image_url?: string | null;
   is_returnable: boolean;
+  version?: number;
   created_at?: string;
 }
 
@@ -112,21 +115,24 @@ export interface Citation {
 }
 
 export interface AgentMessage {
+  message_id: string;
   role: string;
   content: string;
   sequence_number: number;
-  turn_sequence: number;
-  tool_calls?: unknown;
-  tool_call_id?: string | null;
-  metadata?: Record<string, unknown>;
+  citations: Citation[];
+  proposed_actions: ProposedAction[];
+  trace_id?: string | null;
+  delivery_status: "sending" | "sent" | "failed" | "retrying";
+  client_message_id?: string | null;
   created_at?: string;
 }
 
 export interface AgentSession {
-  id: string;
-  user_id: string;
+  session_id: string;
+  title: string;
   status: string;
   message_count: number;
+  last_message_preview: string;
   created_at?: string;
   updated_at?: string;
 }

@@ -1,1 +1,53 @@
-scroll-view { height: 100%; }
+page { height: 100%; overflow: hidden; background: #f5f7fa; }
+.agent-page { width: 100%; height: 100%; min-width: 0; display: flex; flex-direction: column; overflow: hidden; background: #f5f7fa; }
+.chat-header { display: flex; flex: none; align-items: center; gap: 12rpx; min-height: 88rpx; padding: 10rpx 20rpx; background: #fff; border-bottom: 1rpx solid #e5e7eb; box-sizing: border-box; }
+.agent-heading { min-width: 0; flex: 1; text-align: center; }
+.agent-title { display: block; overflow: hidden; font-size: 30rpx; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+button.header-button { display: flex; flex: none; align-items: center; justify-content: center; gap: 5rpx; width: 122rpx; min-width: 122rpx; height: 58rpx; margin: 0; padding: 0 8rpx; background: #fff; border: 1rpx solid #cbd5e1; border-radius: 10rpx; font-size: 22rpx; line-height: 1; box-sizing: border-box; }
+button.header-button::after, .drawer-heading button::after { border: 0; }
+button.header-button.primary, button.small-button.primary { border-color: #2f6bee; background: #2f6bee; color: #fff; }
+.button-icon { flex: none; font-size: 24rpx; font-weight: 600; }
+.drawer-layer { position: fixed; z-index: 20; top: 0; right: 0; bottom: 0; left: 0; }
+.drawer-mask { position: absolute; inset: 0; background: rgba(31, 41, 55, .35); }
+.session-drawer { position: absolute; top: 0; bottom: 0; left: 0; display: flex; flex-direction: column; width: 78%; max-width: 600rpx; padding: 30rpx 22rpx calc(30rpx + env(safe-area-inset-bottom)); background: #fff; box-sizing: border-box; }
+.drawer-heading { display: flex; align-items: center; justify-content: space-between; font-size: 32rpx; font-weight: 700; }
+.drawer-heading button { width: auto; min-width: 80rpx; margin: 0; padding: 0 12rpx; background: transparent; color: #667085; font-size: 24rpx; line-height: 1.6; }
+.drawer-scroll { min-height: 0; flex: 1; }
+.session-note { margin-bottom: 12rpx; color: #64748b; font-size: 22rpx; }
+.session-item { padding: 14rpx 16rpx; border-radius: 10rpx; }
+.session-item.active { background: #eff6ff; }
+.session-title { overflow: hidden; font-size: 25rpx; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.session-meta { overflow: hidden; margin-top: 4rpx; color: #64748b; font-size: 21rpx; text-overflow: ellipsis; white-space: nowrap; }
+.session-preview { overflow: hidden; margin-top: 4rpx; color: #94a3b8; font-size: 21rpx; text-overflow: ellipsis; white-space: nowrap; }
+.empty-small { padding: 20rpx; color: #94a3b8; text-align: center; font-size: 23rpx; }
+.message-scroll { width: 100%; min-width: 0; min-height: 0; flex: 1; box-sizing: border-box; padding: 24rpx; background: #f7f8fa; }
+.welcome-card { padding: 110rpx 30rpx; text-align: center; }
+.welcome-icon { width: 88rpx; height: 88rpx; margin: 0 auto 24rpx; border-radius: 24rpx; background: #2563eb; color: #fff; font-size: 28rpx; font-weight: 700; line-height: 88rpx; }
+.welcome-title { margin-bottom: 12rpx; font-size: 31rpx; font-weight: 700; }
+.message-row { display: flex; width: 100%; min-width: 0; margin-bottom: 22rpx; box-sizing: border-box; }
+.message-row.user { justify-content: flex-end; }
+.message-row.assistant { justify-content: flex-start; }
+.message-bubble { min-width: 0; max-width: 80%; box-sizing: border-box; padding: 18rpx 22rpx; border-radius: 18rpx; font-size: 28rpx; line-height: 1.65; overflow-wrap: anywhere; word-break: break-word; white-space: normal; }
+.user-bubble { background: #2f6bee; color: #fff; border-bottom-right-radius: 5rpx; }
+.assistant-bubble { background: #fff; border: 1rpx solid #e2e8f0; border-bottom-left-radius: 5rpx; }
+.delivery-status { margin-top: 10rpx; color: #dbeafe; font-size: 21rpx; }
+button.retry-button { display: inline-block; width: auto; min-width: 0; margin-left: 12rpx; padding: 0; background: transparent; color: #fff; font-size: 21rpx; line-height: 1.4; text-decoration: underline; }
+.citation-list { margin-top: 16rpx; padding-top: 14rpx; border-top: 1rpx solid #e2e8f0; }
+.section-label { margin-bottom: 8rpx; color: #334155; font-size: 23rpx; font-weight: 700; }
+.citation-card { width: 100%; margin-top: 8rpx; padding: 12rpx; border-radius: 10rpx; background: #f8fafc; color: #475569; font-size: 22rpx; overflow-wrap: anywhere; box-sizing: border-box; }
+.policy-key { padding: 2rpx 6rpx; border-radius: 4rpx; background: #e2e8f0; font-family: monospace; word-break: break-all; }
+.action-card { width: 100%; margin-top: 14rpx; padding: 14rpx; border-radius: 10rpx; background: #eff6ff; color: #1e40af; overflow-wrap: anywhere; box-sizing: border-box; }
+.approval-card { margin-top: 14rpx; padding: 14rpx; border-radius: 10rpx; background: #fffbeb; color: #92400e; }
+.waiting-card { min-width: 280rpx; }
+.memory-suggestion { margin: 16rpx 0 24rpx; padding: 20rpx; border: 1rpx solid #bfdbfe; border-radius: 14rpx; background: #eff6ff; }
+.memory-actions { display: flex; gap: 12rpx; margin-top: 16rpx; }
+button.small-button { width: auto; min-width: 0; margin: 0; padding: 10rpx 18rpx; border: 1rpx solid #cbd5e1; border-radius: 9rpx; background: #fff; font-size: 23rpx; line-height: 1.5; }
+.inline-error { margin: 16rpx 0; color: #dc2626; text-align: center; font-size: 23rpx; }
+.confirm-bar { display: flex; flex: none; gap: 14rpx; padding: 14rpx 20rpx; background: #fff; border-top: 1rpx solid #e5e7eb; }
+.confirm-bar button { flex: 1; margin: 0; border-radius: 10rpx; font-size: 26rpx; }
+.confirm-button { background: #16a34a; color: #fff; }
+.cancel-button { background: #f1f5f9; color: #334155; }
+.composer { display: flex; flex: none; align-items: center; gap: 14rpx; min-height: 104rpx; padding: 14rpx 20rpx calc(14rpx + env(safe-area-inset-bottom)); background: #fff; border-top: 1rpx solid #e5e7eb; box-sizing: border-box; }
+.message-input { min-width: 0; height: 76rpx; flex: 1; box-sizing: border-box; padding: 0 22rpx; border: 1rpx solid #cbd5e1; border-radius: 14rpx; background: #f8fafc; font-size: 30rpx; }
+button.send-button { flex: none; width: 124rpx; min-width: 124rpx; height: 76rpx; margin: 0; padding: 0; border-radius: 14rpx; background: #2f6bee; color: #fff; font-size: 29rpx; line-height: 76rpx; }
+button.send-button::after { border: 0; }

@@ -1,41 +1,86 @@
 "use client";
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { adminTickets, type Ticket } from "@/lib/api";
-
-export default function AdminTicketDetailPage() {
+import { formatDateTime, friendlyError, labelFor } from "@/lib/labels";
+import {
+  ErrorState,
+  LoadingState,
+  PageHeader,
+  SectionCard,
+  StatusBadge,
+} from "@/components/admin-ui";
+export default function TicketDetail() {
   const { id } = useParams<{ id: string }>();
-  const [ticket, setTicket] = useState<Ticket | null>(null);
-  const [error, setError] = useState("");
-
+  const [ticket, setTicket] = useState<Ticket | null>(null),
+    [error, setError] = useState("");
   useEffect(() => {
-    adminTickets.get(id)
-      .then(r => { if (r.success && r.data) setTicket(r.data); })
-      .catch(e => setError(e instanceof Error ? e.message : "加载失败"));
+    adminTickets
+      .get(id)
+      .then((r) => setTicket(r.data))
+      .catch((e) => setError(friendlyError(e)));
   }, [id]);
-
+  if (error) return <ErrorState message={error} />;
+  if (!ticket) return <LoadingState />;
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-gray-800 text-white px-6 py-3">
-        <Link href="/tickets" className="font-bold">← 工单管理</Link>
-      </nav>
-      <main className="max-w-3xl mx-auto p-6">
-        {error && <p className="text-red-600">{error}</p>}
-        {!ticket && !error && <p className="text-gray-500">加载中...</p>}
-        {ticket && (
-          <div className="bg-white border rounded-xl p-6 space-y-3">
-            <h1 className="text-2xl font-bold">{ticket.ticket_number}</h1>
-            <p>状态: {ticket.status}</p>
-            <p>类型: {ticket.intent}</p>
-            <p className="font-mono text-sm">订单: {ticket.order_id}</p>
-            <p>版本: v{ticket.version}</p>
+    <>
+      <PageHeader
+        title={`工单 ${ticket.ticket_number}`}
+        description="工单基本信息与安全处理状态"
+      />
+      <div className="grid gap-5 lg:grid-cols-2">
+        <SectionCard title="基本信息">
+          <dl className="grid grid-cols-2 gap-4 p-5 text-sm">
+            <div>
+              <dt className="text-slate-500">状态</dt>
+              <dd>
+                <StatusBadge value={ticket.status} />
+              </dd>
+            </div>
+            <div>
+              <dt className="text-slate-500">售后类型</dt>
+              <dd>{labelFor(ticket.intent)}</dd>
+            </div>
+            <div>
+              <dt className="text-slate-500">订单 ID</dt>
+              <dd className="break-all font-mono text-xs">{ticket.order_id}</dd>
+            </div>
+            <div>
+              <dt className="text-slate-500">版本</dt>
+              <dd>v{ticket.version}</dd>
+            </div>
+            <div>
+              <dt className="text-slate-500">创建时间</dt>
+              <dd>{formatDateTime(ticket.created_at)}</dd>
+            </div>
+            <div>
+              <dt className="text-slate-500">更新时间</dt>
+              <dd>{formatDateTime(ticket.updated_at)}</dd>
+            </div>
+          </dl>
+        </SectionCard>
+        <SectionCard title="处理说明">
+          <div className="space-y-3 p-5 text-sm">
+            <p>
+              <span className="text-slate-500">用户诉求：</span>
+              {ticket.customer_request || "暂无记录"}
+            </p>
+            <p>
+              <span className="text-slate-500">运营备注：</span>
+              {ticket.operator_notes || "暂无记录"}
+            </p>
             {ticket.reject_reason && (
-              <p className="text-red-600">拒绝原因: {ticket.reject_reason}</p>
+              <p className="text-red-700">拒绝原因：{ticket.reject_reason}</p>
             )}
           </div>
-        )}
-      </main>
-    </div>
+        </SectionCard>
+      </div>
+      <SectionCard title="关联信息" className="mt-5">
+        <p className="p-5 text-sm text-slate-500">
+          Agent
+          会话、工具日志、审批与政策引用可分别在追踪、日志和审批页面按关联标识查询。当前详情接口未返回的数据不会在页面中伪造。
+        </p>
+      </SectionCard>
+    </>
   );
 }

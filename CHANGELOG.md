@@ -5,26 +5,50 @@ All notable changes to the ResolveAI project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-
-### Release target
-- v1.0.1
+## [1.0.1] — 2026-07-16
 
 ### Added
-- Secure OpenAI-compatible Qwen provider for optional local real-model demos.
-- Expanded after-sales policy knowledge base with structured citations and official-source notes.
+- AnthropicProvider `base_url` parameter for DeepSeek/Qwen Anthropic-compatible endpoints.
+- `scripts/configure-deepseek.sh` — secure API key input (hidden + chmod 600).
+- `scripts/check-secrets.py` — git-tracked files secret scanner.
+- `backend/scripts/smoke_deepseek.py` — manual real-model smoke test (not in CI).
+- 10 new 900-series policy documents based on official Chinese regulations:
+  - POL-RET-901/902: 7-day no-reason returns and excluded products.
+  - POL-REF-901/902: quality-issue refunds, refund timeline, shipping fees.
+  - POL-EXC-901: exchanges and product category rules.
+  - POL-LOG-901: logistics delay, loss, damage, and delivery disputes.
+  - POL-RES-901: missing/wrong items and reshipment.
+  - POL-RISK-901: high-value and multi-item human approval rules.
+  - POL-SOP-901: no-policy-match escalation to human agents.
+  - POL-GEN-901: data minimization and personal information protection.
+- `docs/knowledge-base-source-report.md` — traceable source report for new policies.
+- Playwright E2E configs for customer-web (8 specs) and admin-web (7 specs).
+- `tests/integration/test_seed_idempotency.py` — double-seed data stability test.
+
+### Changed
+- `docker-compose.yml`: `LLM_BASE_URL` env var, policy ingestion at startup, health checks.
+- `.env.example`: DeepSeek/qwen config examples, demo account env vars.
+- Default mock provider setup runs with zero real API keys.
+- `seed.py`: env-configured demo accounts, idempotent logistics records.
 
 ### Fixed
 - Separated policy consultation from explicit after-sales action requests.
-- Connected policy search through the existing Agent tool path.
-- Hardened pending-action confirmation, approval execution, and idempotency.
-- Corrected Customer Web logistics requests and idempotent demo logistics seeding.
+- Idempotent demo logistics seeding (stable tracking numbers on rerun).
+- `print()` replaced with `logging.getLogger(__name__)` in `ingest_policies.py`.
+- Memory metric naming: False-Write Avoidance Rate and False Write Rate separated.
+
+### Diagnostics & Security
+- `check-secrets.py` reports file path and rule name only, never prints secrets.
+- `smoke_deepseek.py` redacts API key from error messages automatically.
 
 ### Validation
-- 525 backend tests passed.
-- Customer Playwright: 14 passed.
-- Admin Playwright: 8 passed.
-- Default CI and clone demo remain on mock providers; real Qwen credentials stay in local `.env` or deployment secrets.
+- 469 backend tests passed (0 failures).
+- Customer Web build + lint passed.
+- Admin Web build + lint passed.
+- Docker compose: 4 services healthy/running.
+- Customer Playwright E2E: 8/8 passed.
+- Admin Playwright E2E: 7/7 passed.
+- Secret scanner: no secrets detected in tracked files.
 
 ## [0.2.0] — 2026-07-14
 

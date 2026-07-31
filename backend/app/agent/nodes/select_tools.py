@@ -15,7 +15,7 @@ async def select_tools(state: AgentState) -> AgentState:
     if state.get("request_mode") == "CONSULTATION":
         planned.append({
             "tool_name": "search_after_sales_policy",
-            "tool_input": {"query": state.get("user_message", ""), "top_k": 5},
+            "tool_input": {"query": _contextual_policy_query(state), "top_k": 5},
         })
         state["planned_tools"] = planned
         state["node_timings"][-1]["routing_decision"] = "tool_route:policy_search"
@@ -71,6 +71,17 @@ async def select_tools(state: AgentState) -> AgentState:
         {"selected_tool": item["tool_name"]} for item in planned
     ]
     return state
+
+
+def _contextual_policy_query(state: AgentState) -> str:
+    """Resolve short follow-ups with the most recent user context."""
+    current = state.get("user_message", "")
+    previous = next((
+        str(item.get("content", ""))
+        for item in reversed(state.get("context_messages") or [])
+        if item.get("role") == "USER" and item.get("content")
+    ), "")
+    return f"{previous}\n{current}"[-1000:] if previous else current
 
 
 _PRODUCT_ALIASES: dict[str, tuple[str, ...]] = {

@@ -1,6 +1,6 @@
 [project]
 name = "resolveai"
-version = "0.1.0"
+version = "1.0.1"
 description = "ResolveAI — AI-powered e-commerce after-sales intelligent ticket agent"
 requires-python = ">=3.12"
 

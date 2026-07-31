@@ -21,6 +21,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [user, setUser] = useState<UserInfo | null>(null);
   const [loading, setLoading] = useState(true);
+  const protectedPaths = ["/agent", "/orders", "/tickets", "/memories", "/approvals", "/account"];
+  const isProtected = protectedPaths.some(
+    path => pathname === path || pathname.startsWith(`${path}/`)
+  );
 
   const logout = useCallback(() => {
     clearTokens();
@@ -28,34 +32,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     router.replace("/login");
   }, [router]);
 
-  useEffect(() => {
-    loadTokens();
-    onUnauthorized(logout);
-    auth.me()
-      .then(r => { if (r.success && r.data) setUser(r.data); })
-      .catch(() => logout())
-      .finally(() => setLoading(false));
-  }, [logout]);
+  const handleUnauthorized = useCallback(() => {
+    clearTokens();
+    setUser(null);
+    if (isProtected) router.replace("/login");
+  }, [isProtected, router]);
 
   useEffect(() => {
-    const protectedPaths = ["/agent", "/orders", "/tickets", "/memories", "/approvals"];
-    const isProtected = protectedPaths.some(
-      path => pathname === path || pathname.startsWith(`${path}/`)
-    );
+    const hasTokens = loadTokens();
+    onUnauthorized(handleUnauthorized);
+    if (!hasTokens) {
+      setLoading(false);
+      return;
+    }
+    auth.me()
+      .then(r => { if (r.success && r.data) setUser(r.data); })
+      .catch(() => handleUnauthorized())
+      .finally(() => setLoading(false));
+  }, [handleUnauthorized]);
+
+  useEffect(() => {
     if (!loading && !user && isProtected) router.replace("/login");
-  }, [loading, pathname, router, user]);
+  }, [isProtected, loading, router, user]);
 
   const login = useCallback(async (email: string, password: string) => {
     const r = await auth.login(email, password);
     if (r.success && r.data) {
       setTokens(r.data.access_token, r.data.refresh_token);
       setUser(r.data.user);
-    } else throw new Error("Login failed");
+    } else throw new Error("登录失败，请检查账号和密码");
   }, []);
 
   const register = useCallback(async (email: string, password: string, name: string) => {
     const r = await auth.register(email, password, name);
-    if (!r.success) throw new Error("Registration failed");
+    if (!r.success) throw new Error("注册失败，请检查填写信息");
   }, []);
 
   return <AuthContext.Provider value={{ user, loading, login, register, logout }}>{children}</AuthContext.Provider>;
